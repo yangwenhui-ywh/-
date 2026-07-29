@@ -238,10 +238,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Micr
     <button class="btn-join-sm" id="btnJoin">加入</button>
   </div>
 </div>
-<div class="version-badge" id="versionBadge">v6.1</div>
+<div class="version-badge" id="versionBadge">v7.5-github</div>
 <div class="online-users" id="onlineUsers"></div>
 <div class="last-update" id="lastUpdate"></div>
-</div>
 </header>
 
 <nav class="category-tabs">
@@ -693,7 +692,6 @@ App = {
       this._pushTimer = setTimeout(() => this.pushToCloud(), 800);
     } catch (e) {}
   },
-,
 
   renderHeader() { this.renderHeaderMetaOnly(); this.updateLastUpdate(); },
 
