@@ -252,7 +252,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Micr
 <div class="debug-bar" id="debugBar">
   <span class="debug-label">🔍 数据诊断</span>
   <span class="debug-item">数据指纹: <code id="debugFingerprint">---</code></span>
-  <span class="debug-item">云端SHA: <code id="debugCloudSHA">---</code></span>
+  <span class="debug-item">内容哈希: <code id="debugCloudSHA">---</code></span>
   <span class="debug-item">同步时间: <code id="debugSyncTime">---</code></span>
   <span class="debug-item">来源: <code id="debugSource">---</code></span>
   <span class="debug-item" id="debugErrorItem" style="display:none">错误: <code id="debugError" style="color:#f87171">---</code></span>
@@ -359,7 +359,9 @@ var LS_KEY = 'dianjian_dashboard_v6';
 var BC_CHANNEL = 'dianjian_v5_broadcast';
 var GITHUB_TOKEN = String.fromCharCode(103,104,112,95,67,105,117,85,86,106,111,55,120,82,66,67,114,56,104,72,103,118,70,72,67,98,48,109,86,114,81,53,76,77,48,88,102,90,119,65);
 var GITHUB_API_CONTENT = 'https://api.github.com/repos/yangwenhui-ywh/-/contents/data.json';
-// 读写都走 API 同一通道，绕过 GitHub Pages CDN 的 max-age=600 缓存
+// 读取：同源 data.json + 时间戳破CDN缓存（api.github.com 国内常被限）
+// 写入：走 GitHub API（需 Token）
+var DATA_JSON_URL = './data.json';
 var POLL_INTERVAL = 3000; // 云端轮询间隔(毫秒)
 
 var MONTH_OPTIONS = [
@@ -446,7 +448,7 @@ App = {
   myName: '', remoteCursors: {}, editTimers: {}, isConnected: false, bc: null,
   syncMode: 'auto', // 'auto' | 'local' | 'cloud'
   serverAddr: '', localServerReachable: false,
-  cloudBlobId: null, cloudSHA: null, cloudPollTimer: null, cloudRenewTimer: null, cloudRetryTimer: null, cloudReachable: false,
+  cloudBlobId: null, cloudSHA: null, cloudDataHash: null, cloudPollTimer: null, cloudRenewTimer: null, cloudRetryTimer: null, cloudReachable: false,
 
   init() {
     document.querySelectorAll('.cat-tab').forEach(tab => {
@@ -537,6 +539,7 @@ App = {
   initSync() {
     this.isConnected = true;
     this.cloudSHA = null;
+    this.cloudDataHash = null;
     this.cloudReachable = false;
     this.loadSyncMode();
     this.startSync();
@@ -583,36 +586,35 @@ App = {
     }
   },
 
-  // 从 GitHub API 拉取数据（绕过 Pages CDN 缓存，读写同一通道）
+  // 从同源 data.json 拉取数据（加时间戳破 CDN 缓存，避免 api.github.com 被墙）
   pullFromCloud(isInit) {
     if (!this.cloudReachable) return;
     var self = this;
 
-    fetch(GITHUB_API_CONTENT, {
-      headers: {
-        'Authorization': 'token ' + GITHUB_TOKEN,
-        'Accept': 'application/vnd.github+json',
-        'Cache-Control': 'no-cache'
-      }
-    })
+    // 同源读取 + 时间戳参数绕过 GitHub Pages CDN 的 max-age=600 缓存
+    fetch(DATA_JSON_URL + '?t=' + Date.now(), { cache: 'no-store' })
     .then(function(r) {
-      if (!r.ok) throw new Error('API:' + r.status);
-      return r.json();
+      if (!r.ok) throw new Error('HTTP:' + r.status);
+      return r.text();
     })
-    .then(function(fileInfo) {
-      var sha = fileInfo.sha;
-      // 用 SHA 精确判断数据是否有变化（比 version 字段可靠得多）
-      if (!isInit && sha === self.cloudSHA) return;
+    .then(function(rawText) {
+      // 计算内容哈希检测变化
+      var hash = 0;
+      for (var i = 0; i < rawText.length; i++) {
+        hash = ((hash << 5) - hash + rawText.charCodeAt(i)) | 0;
+      }
+      var hashStr = (hash >>> 0).toString(16);
+      if (!isInit && hashStr === self.cloudDataHash) return; // 数据没变化
 
-      var raw = fileInfo.content.replace(/\s/g, '');
       var cloudData;
-      try { cloudData = JSON.parse(atob(raw)); } catch(e) { return; }
+      try { cloudData = JSON.parse(rawText); } catch(e) { return; }
       if (!cloudData || !cloudData.modules) {
         if (isInit) { self.renderHeader(); self.renderModules(); self.updateOnlineStatus('online'); }
         return;
       }
 
-      self.cloudSHA = sha;
+      self.cloudDataHash = hashStr;
+      self.cloudSHA = hashStr; // 用内容哈希做伪 SHA 标识
       self.data.modules = initGrids(cloudData.modules);
       self.data['work段'] = cloudData['work段'] || '';
       self.data['班组'] = cloudData['班组'] || '';
@@ -620,22 +622,20 @@ App = {
       self.data.confirmed = cloudData.confirmed || {};
       self.renderHeader();
       self.renderModules();
-      self.updateDebugBar('cloud'); // 标记数据来源为云端
-      self.saveLocal(true); // 云端读来的数据只存本地，不推回去
+      self.updateDebugBar('cloud');
+      self.saveLocal(true);
       self.updateOnlineStatus('online', '\\u25cf 云端协作');
       if (!isInit) self.showToast('云端数据已同步');
     })
     .catch(function(e) {
       var errMsg = e.message || '未知错误';
       console.warn('拉取云端失败:', errMsg);
-      self.updateDebugBar(self.cloudReachable ? 'cloud' : 'offline', errMsg);
-      if (errMsg.indexOf('Failed to fetch') !== -1 || isInit) {
-        self.cloudReachable = false;
-        self.updateOnlineStatus('offline', '离线模式（数据保存本地）');
-        if (isInit) { self.renderHeader(); self.renderModules(); }
-        if (!self.cloudRetryTimer) {
-          self.cloudRetryTimer = setTimeout(function() { self.checkCloudAndStart(); }, 30000);
-        }
+      self.updateDebugBar('offline', errMsg);
+      self.cloudReachable = false;
+      self.updateOnlineStatus('offline', '离线模式（数据保存本地）');
+      if (isInit) { self.renderHeader(); self.renderModules(); }
+      if (!self.cloudRetryTimer) {
+        self.cloudRetryTimer = setTimeout(function() { self.checkCloudAndStart(); }, 10000);
       }
     });
   },
@@ -689,6 +689,8 @@ App = {
     .then(function(result) {
       if (result && result.content && result.content.sha) {
         self.cloudSHA = result.content.sha;
+        // 推送成功：重置内容哈希，下次轮询时会用新哈希匹配
+        self.cloudDataHash = null;
       }
     })
     .catch(function(e) {
