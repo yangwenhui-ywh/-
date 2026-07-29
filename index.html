@@ -477,7 +477,8 @@ App = {
     if (!this.data || !this.data.modules || Object.keys(this.data.modules).length === 0) {
       this.data = initGrids(JSON.parse(JSON.stringify(INITIAL_DATA)));
     }
-    this.renderHeader(); this.renderModules();
+    // 先显示同步中，等云端数据回来再渲染
+    this.updateOnlineStatus('connecting', '正在同步云端数据...');
     try {
       this.bc = new BroadcastChannel(BC_CHANNEL);
       var self = this;
@@ -541,7 +542,6 @@ App = {
     this.pullFromCloud(true);
     var self = this;
     this.cloudPollTimer = setInterval(function() { self.pullFromCloud(false); }, POLL_INTERVAL);
-    this.updateOnlineStatus('online', '\u25cf 云端协作');
   },
 
   updateOnlineStatus(mode, text) {
@@ -571,7 +571,11 @@ App = {
       return r.json();
     })
     .then(function(cloudData) {
-      if (!cloudData || !cloudData.modules) return;
+      if (!cloudData || !cloudData.modules) {
+        // 云端无数据，首次加载用本地数据渲染
+        if (isInit) { self.renderHeader(); self.renderModules(); self.updateOnlineStatus('online', '\\u25cf 云端协作'); }
+        return;
+      }
       if (!isInit && cloudData.version <= self.cloudVersion) return;
       self.data.modules = initGrids(cloudData.modules);
       self.data['work段'] = cloudData['work段'] || '';
@@ -582,6 +586,7 @@ App = {
       self.renderHeader();
       self.renderModules();
       self.saveLocal();
+      self.updateOnlineStatus('online', '\\u25cf 云端协作');
       if (!isInit) self.showToast('云端数据已同步');
     })
     .catch(function(e) {
@@ -589,6 +594,8 @@ App = {
       if ((e.message || '').indexOf('Failed to fetch') !== -1 || isInit) {
         self.cloudReachable = false;
         self.updateOnlineStatus('offline', '离线模式（数据保存本地）');
+        // 首次加载失败时用本地数据渲染
+        if (isInit) { self.renderHeader(); self.renderModules(); }
         if (!self.cloudRetryTimer) {
           self.cloudRetryTimer = setTimeout(function() { self.checkCloudAndStart(); }, 30000);
         }
