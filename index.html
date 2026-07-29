@@ -260,6 +260,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Micr
   <span class="debug-item">内容哈希: <code id="debugCloudSHA">---</code></span>
   <span class="debug-item">同步时间: <code id="debugSyncTime">---</code></span>
   <span class="debug-item">来源: <code id="debugSource">---</code></span>
+  <span class="debug-item" id="debugProxyItem" style="display:none">代理: <code id="debugProxy" style="color:#22c55e">---</code></span>
   <span class="debug-item" id="debugErrorItem" style="display:none">错误: <code id="debugError" style="color:#f87171">---</code></span>
   <button class="debug-toggle" id="debugToggle" title="收起">▲</button>
 </div>
@@ -856,11 +857,15 @@ App = {
   // 检测代理是否可用
   _detectProxy(callback) {
     var self = this;
-    // 自动检测代理 URL：同源 > localhost:8080
-    var urls = [
-      window.location.origin + '/api/github-proxy',
-      'http://localhost:8080/api/github-proxy'
-    ];
+    // 自动检测代理 URL：URL参数 > localStorage > 同源 > localhost:8080
+    var urlParam = new URLSearchParams(window.location.search).get('proxy');
+    var savedUrl = localStorage.getItem('writeProxyUrl');
+    
+    var urls = [];
+    if (urlParam) urls.push(urlParam);
+    if (savedUrl && savedUrl !== urlParam) urls.push(savedUrl);
+    urls.push(window.location.origin + '/api/github-proxy');
+    urls.push('http://localhost:8080/api/github-proxy');
 
     function tryUrl(idx) {
       if (idx >= urls.length) {
@@ -872,9 +877,17 @@ App = {
       var url = urls[idx];
       fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"_ping":1}' })
         .then(function(r) {
-          // 只要不是网络错误，就认为代理可用（404/500 也算可达）
+          // 只要不是网络错误，就认为代理可用
           self._proxyAvailable = true;
           self._writeProxyUrl = url;
+          localStorage.setItem('writeProxyUrl', url);
+          // 更新诊断面板显示代理
+          var proxyEl = document.getElementById('debugProxy');
+          var proxyItem = document.getElementById('debugProxyItem');
+          if (proxyEl && proxyItem) {
+            proxyEl.textContent = '✓ ' + url.replace(/\/api\/github-proxy$/, '');
+            proxyItem.style.display = '';
+          }
           console.log('检测到写代理: ' + url);
           callback(true);
         })
