@@ -864,7 +864,9 @@ App = {
     var urls = [];
     if (urlParam) urls.push(urlParam);
     if (savedUrl && savedUrl !== urlParam) urls.push(savedUrl);
+    urls.push(window.location.origin + '/api/write');
     urls.push(window.location.origin + '/api/github-proxy');
+    urls.push('http://localhost:8080/api/write');
     urls.push('http://localhost:8080/api/github-proxy');
 
     function tryUrl(idx) {
@@ -885,7 +887,7 @@ App = {
           var proxyEl = document.getElementById('debugProxy');
           var proxyItem = document.getElementById('debugProxyItem');
           if (proxyEl && proxyItem) {
-            proxyEl.textContent = '✓ ' + url.replace(/\/api\/github-proxy$/, '');
+            proxyEl.textContent = '✓ ' + url.replace(/\/api\/(write|github-proxy)$/, '');
             proxyItem.style.display = '';
           }
           console.log('检测到写代理: ' + url);
