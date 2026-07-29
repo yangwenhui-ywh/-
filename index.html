@@ -330,8 +330,8 @@ var APP_VERSION = 'v7.5-github'; // GitHub API 同步版，无需第三方服务
 var LS_KEY = 'dianjian_dashboard_v6';
 var BC_CHANNEL = 'dianjian_v5_broadcast';
 var GITHUB_TOKEN = String.fromCharCode(103,104,112,95,67,105,117,85,86,106,111,55,120,82,66,67,114,56,104,72,103,118,70,72,67,98,48,109,86,114,81,53,76,77,48,88,102,90,119,65);
-var GITHUB_RAW = './data.json'; // 同源读取，避免 raw.githubusercontent.com 被墙导致不同步
 var GITHUB_API_CONTENT = 'https://api.github.com/repos/yangwenhui-ywh/-/contents/data.json';
+// 读写都走 API 同一通道，绕过 GitHub Pages CDN 的 max-age=600 缓存
 var POLL_INTERVAL = 3000; // 云端轮询间隔(毫秒)
 
 var MONTH_OPTIONS = [
@@ -418,7 +418,7 @@ App = {
   myName: '', remoteCursors: {}, editTimers: {}, isConnected: false, bc: null,
   syncMode: 'auto', // 'auto' | 'local' | 'cloud'
   serverAddr: '', localServerReachable: false,
-  cloudBlobId: null, cloudETag: null, cloudVersion: 0, cloudPollTimer: null, cloudRenewTimer: null, cloudRetryTimer: null, cloudReachable: false,
+  cloudBlobId: null, cloudSHA: null, cloudPollTimer: null, cloudRenewTimer: null, cloudRetryTimer: null, cloudReachable: false,
 
   init() {
     document.querySelectorAll('.cat-tab').forEach(tab => {
@@ -488,7 +488,7 @@ App = {
           self.data['work段'] = e.data['work段'];
           self.data['班组'] = e.data['班组'];
           self.data.lastUpdate = e.data.lastUpdate;
-          if (e.data.cloudVersion) self.cloudVersion = e.data.cloudVersion;
+          if (e.data.cloudSHA) self.cloudSHA = e.data.cloudSHA;
           self.renderModules();
           self.renderHeaderMetaOnly();
         }
@@ -508,8 +508,7 @@ App = {
 
   initSync() {
     this.isConnected = true;
-    this.cloudVersion = 0;
-    this.cloudETag = null;
+    this.cloudSHA = null;
     this.cloudReachable = false;
     this.loadSyncMode();
     this.startSync();
@@ -556,33 +555,41 @@ App = {
     }
   },
 
-  // 从 GitHub 拉取数据（所有人共享同一个 data.json）
+  // 从 GitHub API 拉取数据（绕过 Pages CDN 缓存，读写同一通道）
   pullFromCloud(isInit) {
     if (!this.cloudReachable) return;
     var self = this;
-    var headers = { 'Cache-Control': 'no-cache' };
-    if (!isInit && this.cloudETag) headers['If-None-Match'] = this.cloudETag;
 
-    fetch(GITHUB_RAW, { headers: headers })
+    fetch(GITHUB_API_CONTENT, {
+      headers: {
+        'Authorization': 'token ' + GITHUB_TOKEN,
+        'Accept': 'application/vnd.github+json',
+        'Cache-Control': 'no-cache'
+      }
+    })
     .then(function(r) {
-      if (r.status === 304) return null;
-      var etag = r.headers.get('ETag');
-      if (etag) self.cloudETag = etag;
+      if (!r.ok) throw new Error('API:' + r.status);
       return r.json();
     })
-    .then(function(cloudData) {
+    .then(function(fileInfo) {
+      var sha = fileInfo.sha;
+      // 用 SHA 精确判断数据是否有变化（比 version 字段可靠得多）
+      if (!isInit && sha === self.cloudSHA) return;
+
+      var raw = fileInfo.content.replace(/\s/g, '');
+      var cloudData;
+      try { cloudData = JSON.parse(atob(raw)); } catch(e) { return; }
       if (!cloudData || !cloudData.modules) {
-        // 云端无数据，首次加载用本地数据渲染
-        if (isInit) { self.renderHeader(); self.renderModules(); self.updateOnlineStatus('online', '\\u25cf 云端协作'); }
+        if (isInit) { self.renderHeader(); self.renderModules(); self.updateOnlineStatus('online'); }
         return;
       }
-      if (!isInit && cloudData.version <= self.cloudVersion) return;
+
+      self.cloudSHA = sha;
       self.data.modules = initGrids(cloudData.modules);
       self.data['work段'] = cloudData['work段'] || '';
       self.data['班组'] = cloudData['班组'] || '';
       self.data.lastUpdate = cloudData.updatedAt || new Date().toISOString();
       self.data.confirmed = cloudData.confirmed || {};
-      self.cloudVersion = cloudData.version || 1;
       self.renderHeader();
       self.renderModules();
       self.saveLocal();
@@ -594,7 +601,6 @@ App = {
       if ((e.message || '').indexOf('Failed to fetch') !== -1 || isInit) {
         self.cloudReachable = false;
         self.updateOnlineStatus('offline', '离线模式（数据保存本地）');
-        // 首次加载失败时用本地数据渲染
         if (isInit) { self.renderHeader(); self.renderModules(); }
         if (!self.cloudRetryTimer) {
           self.cloudRetryTimer = setTimeout(function() { self.checkCloudAndStart(); }, 30000);
@@ -607,8 +613,6 @@ App = {
   pushToCloud() {
     if (!this.cloudReachable || !GITHUB_TOKEN) return;
     var self = this;
-    self.cloudVersion++;
-
     fetch(GITHUB_API_CONTENT, {
       headers: {
         'Authorization': 'token ' + GITHUB_TOKEN,
@@ -622,7 +626,6 @@ App = {
     })
     .then(function(fileInfo) {
       var payload = {
-        version: self.cloudVersion,
         updatedAt: new Date().toISOString(),
         updatedBy: self.myName,
         modules: self.data.modules,
@@ -654,13 +657,11 @@ App = {
     })
     .then(function(result) {
       if (result && result.content && result.content.sha) {
-        self.cloudETag = '"' + result.content.sha + '"';
+        self.cloudSHA = result.content.sha;
       }
-      console.log('push ok v' + self.cloudVersion);
     })
     .catch(function(e) {
       console.warn('push fail:', e.message);
-      self.cloudVersion--;
       if ((e.message || '').indexOf('Failed to fetch') !== -1) {
         self.cloudReachable = false;
         self.updateOnlineStatus('offline', '离线模式（数据保存本地）');
@@ -674,7 +675,7 @@ App = {
     try {
       localStorage.setItem(LS_KEY, JSON.stringify(this.data));
       if (this.bc) this.bc.postMessage({
-        type: 'data-sync', from: this.myName, cloudVersion: this.cloudVersion,
+        type: 'data-sync', from: this.myName, cloudSHA: this.cloudSHA,
         modules: this.data.modules,
         'work段': this.data['work段'], '班组': this.data['班组'],
         lastUpdate: this.data.lastUpdate
