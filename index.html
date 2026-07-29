@@ -497,6 +497,26 @@ App = {
         }
       }.bind(this));
     }
+    // 页面关闭/刷新前立即推送数据，防止丢失
+    var self = this;
+    window.addEventListener('beforeunload', function() {
+      // 清除所有防抖定时器
+      clearTimeout(self._pushTimer);
+      clearTimeout(self._pushRetryTimer);
+      // 使用 keepalive 立即推送（不阻塞页面关闭）
+      if (self.cloudReachable && GITHUB_TOKEN && self.data && self.data.modules) {
+        self.pushToCloud(true);
+      }
+    });
+    // visibilitychange: 页面隐藏时（切标签/锁屏）也保存
+    document.addEventListener('visibilitychange', function() {
+      if (document.hidden) {
+        clearTimeout(self._pushTimer);
+        if (self.cloudReachable && GITHUB_TOKEN && self.data && self.data.modules) {
+          self.pushToCloud(true);
+        }
+      }
+    });
   },
 
   loadAndStart() {
@@ -638,6 +658,20 @@ App = {
         }
       }
 
+      // 比较时间戳：如果本地数据比云端新，保留本地数据
+      var cloudTime = cloudData.updatedAt ? new Date(cloudData.updatedAt).getTime() : 0;
+      var localTime = self.data.lastUpdate ? new Date(self.data.lastUpdate).getTime() : 0;
+      
+      if (isInit && localTime > cloudTime && localTime > 0) {
+        // 本地数据更新，保留本地并推送到云端
+        self.renderHeader();
+        self.renderModules();
+        self.updateDebugBar('local', '本地数据更新(' + new Date(localTime).toLocaleTimeString() + ')，已保留');
+        self.updateOnlineStatus('online');
+        self.saveLocal(); // 会触发 pushToCloud
+        return;
+      }
+      
       self.data.modules = initGrids(cloudData.modules);
       self.data['work段'] = cloudData['work段'] || '';
       self.data['班组'] = cloudData['班组'] || '';
@@ -664,36 +698,48 @@ App = {
   },
 
   // 推送数据到 GitHub（读写同一个 data.json）
-  pushToCloud() {
-    if (!this.cloudReachable || !GITHUB_TOKEN) return;
+  // force: 是否立即推送（跳过防抖，用于确认/页面关闭等场景）
+  pushToCloud(force) {
+    if (!this.cloudReachable || !GITHUB_TOKEN) {
+      if (force) { console.warn('推送跳过: cloudReachable=' + this.cloudReachable + ', token=' + (GITHUB_TOKEN ? '有' : '无')); }
+      return;
+    }
     var self = this;
     self._pushRetryCount = self._pushRetryCount || 0;
 
-    // 先 GET 获取最新 SHA
-    fetch(GITHUB_API_CONTENT, {
+    // 生成 payload
+    var payload = {
+      updatedAt: new Date().toISOString(),
+      updatedBy: self.myName,
+      modules: self.data.modules,
+      'work段': self.data['work段'],
+      '班组': self.data['班组'],
+      confirmed: self.data.confirmed || {}
+    };
+    var jsonStr = JSON.stringify(payload);
+
+    // keepalive: true 允许在页面关闭时也能发送（Firefox 不支持 keepalive + body > 64KB，这里数据很小）
+    var fetchOpts = {
       headers: {
         'Authorization': 'token ' + GITHUB_TOKEN,
         'Accept': 'application/vnd.github+json',
         'Cache-Control': 'no-cache'
       }
-    })
+    };
+    if (force) {
+      fetchOpts.keepalive = true;
+    }
+
+    // 先 GET 获取最新 SHA
+    fetch(GITHUB_API_CONTENT, fetchOpts)
     .then(function(r) {
       if (!r.ok) throw new Error('GET:' + r.status);
       return r.json();
     })
     .then(function(fileInfo) {
-      var payload = {
-        updatedAt: new Date().toISOString(),
-        updatedBy: self.myName,
-        modules: self.data.modules,
-        'work段': self.data['work段'],
-        '班组': self.data['班组'],
-        confirmed: self.data.confirmed || {}
-      };
-      var jsonStr = JSON.stringify(payload);
       var contentB64 = btoa(unescape(encodeURIComponent(jsonStr)));
 
-      return fetch(GITHUB_API_CONTENT, {
+      var putOpts = {
         method: 'PUT',
         headers: {
           'Authorization': 'token ' + GITHUB_TOKEN,
@@ -706,7 +752,12 @@ App = {
           sha: fileInfo.sha,
           branch: 'main'
         })
-      });
+      };
+      if (force) {
+        putOpts.keepalive = true;
+      }
+
+      return fetch(GITHUB_API_CONTENT, putOpts);
     })
     .then(function(r) {
       if (r && r.ok) return r.json();
@@ -719,7 +770,7 @@ App = {
         self.cloudDataHash = null;
       }
       self.updateDebugBar('cloud', null); // 清除错误
-      self.showToast('数据已同步到云端');
+      if (!force) self.showToast('数据已同步到云端');
     })
     .catch(function(e) {
       self._pushRetryCount++;
@@ -729,16 +780,19 @@ App = {
       // 显示错误到诊断面板
       self.updateDebugBar('local', '推送失败:' + errMsg + ' (#' + self._pushRetryCount + ')');
 
-      // 如果是网络错误，标记离线并重试
-      if (errMsg.indexOf('Failed to fetch') !== -1 || errMsg.indexOf('NetworkError') !== -1) {
+      // 所有错误都重试（不只是网络错误）
+      // 网络类错误：标记离线
+      if (errMsg.indexOf('Failed to fetch') !== -1 || errMsg.indexOf('NetworkError') !== -1 || errMsg.indexOf('Load failed') !== -1) {
         if (self._pushRetryCount >= 3) {
           self.cloudReachable = false;
           self.updateOnlineStatus('offline', '推送失败，数据暂存本地');
         }
-        // 重试：指数退避 2s/4s/8s
-        if (self._pushRetryCount <= 5) {
-          setTimeout(function() { self.pushToCloud(); }, Math.min(2000 * Math.pow(2, self._pushRetryCount - 1), 30000));
-        }
+      }
+      
+      // 重试：指数退避 2s/4s/8s/16s/30s
+      if (self._pushRetryCount <= 5) {
+        var delay = Math.min(2000 * Math.pow(2, self._pushRetryCount - 1), 30000);
+        self._pushRetryTimer = setTimeout(function() { self.pushToCloud(false); }, delay);
       }
     });
   },
@@ -1080,9 +1134,9 @@ App = {
       data: snapshot
     };
     this.saveLocal();
-    // 推送到云端确保已确认数据同步
+    // 确认操作立即推送到云端，确保数据不丢失
     clearTimeout(this._pushTimer);
-    this._pushTimer = setTimeout(() => this.pushToCloud(), 200);
+    this.pushToCloud(true);
     this.showToast(mod.title + ' ' + mod.currentMonth + '月数据' + (wasConfirmed ? '已更新确认' : '已确认提交'));
     this.renderModules();
     // 按钮先显示"更新数据"(金色)，5秒后恢复蓝色"确认数据"
