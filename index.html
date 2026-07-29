@@ -608,9 +608,9 @@ App = {
       if (!isInit && hashStr === self.cloudDataHash) return; // 数据没变化
 
       var cloudData;
-      try { cloudData = JSON.parse(rawText); } catch(e) { return; }
+      try { cloudData = JSON.parse(rawText); } catch(e) { throw new Error('JSON解析失败: ' + e.message); }
       if (!cloudData || !cloudData.modules) {
-        if (isInit) { self.renderHeader(); self.renderModules(); self.updateOnlineStatus('online'); }
+        if (isInit) { self.renderHeader(); self.renderModules(); self.updateDebugBar('local'); self.updateOnlineStatus('online'); }
         return;
       }
 
