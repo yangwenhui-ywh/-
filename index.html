@@ -336,7 +336,7 @@ var ICONS = {
 };
 
 var WEEK_HEADERS = ['日','一','二','三','四','五','六'];
-var APP_VERSION = 'v7.3-cloud'; // 云端版 - jsonblob.com 公网同步（URL哈希共享）
+var APP_VERSION = 'v7.4-cloud'; // 云端版 - jsonblob.com 公网同步（URL哈希自动设置）
 var LS_KEY = 'dianjian_dashboard_v6';
 var BC_CHANNEL = 'dianjian_v5_broadcast';
 var CLOUD_API = 'https://jsonblob.com/api/jsonBlob';
@@ -884,6 +884,13 @@ App = {
     if (this.cloudPollTimer) { clearInterval(this.cloudPollTimer); this.cloudPollTimer = null; }
     if (this.cloudRenewTimer) { clearInterval(this.cloudRenewTimer); this.cloudRenewTimer = null; }
     if (this.cloudBlobId) {
+      // 始终把blobID同步到URL哈希，确保复制网址即分享
+      var curHash = window.location.hash;
+      if (!curHash || !curHash.startsWith('#s=')) {
+        window.location.hash = '#s=' + this.cloudBlobId;
+      } else if (curHash.substring(3) !== this.cloudBlobId) {
+        window.location.hash = '#s=' + this.cloudBlobId;
+      }
       this.pullFromCloud(true);
       this.showShareCode();
     } else {
