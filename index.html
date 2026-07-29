@@ -538,17 +538,9 @@ App = {
   },
 
   checkCloudAndStart() {
-    var self = this;
-    fetch(GITHUB_RAW, { method: 'HEAD', cache: 'no-cache' })
-    .then(function() {
-      self.cloudReachable = true;
-      self._startCloudSync();
-    })
-    .catch(function() {
-      self.cloudReachable = false;
-      self.updateOnlineStatus('offline', '离线模式（数据保存本地）');
-      self.cloudRetryTimer = setTimeout(function() { self.checkCloudAndStart(); }, 30000);
-    });
+    // 直接启动云同步，由 pullFromCloud 自行处理连接失败
+    this.cloudReachable = true;
+    this._startCloudSync();
   },
 
   _startCloudSync() {
@@ -601,8 +593,8 @@ App = {
       if (!isInit) self.showToast('云端数据已同步');
     })
     .catch(function(e) {
-      if (!isInit) console.debug('拉取云端:', e.message);
-      if ((e.message || '').indexOf('Failed to fetch') !== -1) {
+      console.debug('拉取云端:', e.message);
+      if ((e.message || '').indexOf('Failed to fetch') !== -1 || isInit) {
         self.cloudReachable = false;
         self.updateOnlineStatus('offline', '离线模式（数据保存本地）');
         if (!self.cloudRetryTimer) {
