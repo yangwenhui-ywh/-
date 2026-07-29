@@ -648,8 +648,12 @@ App = {
     self._pushRetryCount = self._pushRetryCount || 0;
 
     // 先 GET 获取最新 SHA
-    fetch(GITHUB_API_CONTENT + '?access_token=' + encodeURIComponent(GITHUB_TOKEN), {
-      headers: { 'Accept': 'application/vnd.github+json', 'Cache-Control': 'no-cache' }
+    fetch(GITHUB_API_CONTENT, {
+      headers: {
+        'Authorization': 'token ' + GITHUB_TOKEN,
+        'Accept': 'application/vnd.github+json',
+        'Cache-Control': 'no-cache'
+      }
     })
     .then(function(r) {
       if (!r.ok) throw new Error('GET:' + r.status);
@@ -667,9 +671,10 @@ App = {
       var jsonStr = JSON.stringify(payload);
       var contentB64 = btoa(unescape(encodeURIComponent(jsonStr)));
 
-      return fetch(GITHUB_API_CONTENT + '?access_token=' + encodeURIComponent(GITHUB_TOKEN), {
+      return fetch(GITHUB_API_CONTENT, {
         method: 'PUT',
         headers: {
+          'Authorization': 'token ' + GITHUB_TOKEN,
           'Content-Type': 'application/json',
           'Accept': 'application/vnd.github+json'
         },
