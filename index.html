@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>电检工段指标看板 - 多人协作</title>
+<title>鐢垫宸ユ鎸囨爣鐪嬫澘 - 澶氫汉鍗忎綔</title>
 <script src="./chart.min.js"></script>
 <script>if(typeof Chart==='undefined'){document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"><\/script>');}</script>
 <!-- GitHub API sync - data stored in repo data.json -->
 <style>
-/* ===== 蓝金主题（纯色，无渐变） ===== */
+/* ===== 钃濋噾涓婚锛堢函鑹诧紝鏃犳笎鍙橈級 ===== */
 :root{
   --blue-900:#1e3a5f; --blue-800:#1e40af; --blue-700:#1d4ed8; --blue-600:#2563eb;
   --blue-500:#3b82f6; --blue-400:#60a5fa; --blue-300:#93c5fd; --blue-200:#bfdbfe;
@@ -204,7 +204,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Micr
 .status-capsule.online{background:rgba(34,197,94,.15);color:#16a34a}
 .status-capsule.offline{background:rgba(148,163,184,.15);color:#64748b}
 .status-capsule.local{background:rgba(245,158,11,.15);color:#d97706}
-/* 诊断面板 */
+/* 璇婃柇闈㈡澘 */
 .debug-bar{display:flex;align-items:center;gap:8px 18px;flex-wrap:wrap;padding:4px 16px;background:rgba(15,23,42,.7);border-bottom:1px solid rgba(99,102,241,.15);font-size:11px;color:#94a3b8}
 .debug-bar .debug-label{color:#818cf8;font-weight:700;margin-right:2px}
 .debug-bar .debug-item{display:inline-flex;align-items:center;gap:3px;white-space:nowrap}
@@ -224,23 +224,23 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Micr
 
 <header class="app-header">
 <div class="header-left">
-<h1 class="app-title"><span class="gold-dot"></span>电检工段指标看板</h1>
+<h1 class="app-title"><span class="gold-dot"></span>鐢垫宸ユ鎸囨爣鐪嬫澘</h1>
 <div class="header-meta">
-<label>工段：<input type="text" id="workDuan" class="meta-input" placeholder="电检工段"></label>
-<label>班组：<input type="text" id="banZu" class="meta-input" placeholder="请输入"></label>
+<label>宸ユ锛?input type="text" id="workDuan" class="meta-input" placeholder="鐢垫宸ユ"></label>
+<label>鐝粍锛?input type="text" id="banZu" class="meta-input" placeholder="璇疯緭鍏?></label>
 </div>
 </div>
 <div class="header-right">
 <div class="sync-mode-row" id="syncModeRow">
   <select class="sync-mode-select" id="syncModeSelect">
-    <option value="auto">自动检测</option>
-    <option value="local">本地服务器</option>
-    <option value="cloud" selected>云端(GitHub)</option>
+    <option value="auto">鑷姩妫€娴?/option>
+    <option value="local">鏈湴鏈嶅姟鍣?/option>
+    <option value="cloud" selected>浜戠(GitHub)</option>
   </select>
-  <input type="text" class="server-input" id="serverAddrInput" placeholder="服务器地址: 192.168.x.x:3000" style="display:none">
+  <input type="text" class="server-input" id="serverAddrInput" placeholder="鏈嶅姟鍣ㄥ湴鍧€: 192.168.x.x:3000" style="display:none">
 </div>
 <div class="share-row" id="shareRowCloud" style="display:flex">
-  <span style="color:rgba(255,255,255,.7);font-size:13px">所有人打开同一网址即可协作</span>
+  <span style="color:rgba(255,255,255,.7);font-size:13px">鎵€鏈変汉鎵撳紑鍚屼竴缃戝潃鍗冲彲鍗忎綔</span>
 </div>
 </div>
 <div class="version-badge" id="versionBadge">v7.5-github</div>
@@ -248,28 +248,28 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Micr
 <div class="last-update" id="lastUpdate"></div>
 </header>
 
-<!-- 诊断面板：对比两台设备数据是否一致 -->
+<!-- 璇婃柇闈㈡澘锛氬姣斾袱鍙拌澶囨暟鎹槸鍚︿竴鑷?-->
 <div class="debug-bar" id="debugBar">
-  <span class="debug-label">🔍 数据诊断</span>
-  <span class="debug-item">数据指纹: <code id="debugFingerprint">---</code></span>
-  <span class="debug-item">内容哈希: <code id="debugCloudSHA">---</code></span>
-  <span class="debug-item">同步时间: <code id="debugSyncTime">---</code></span>
-  <span class="debug-item">来源: <code id="debugSource">---</code></span>
-  <span class="debug-item" id="debugErrorItem" style="display:none">错误: <code id="debugError" style="color:#f87171">---</code></span>
-  <button class="debug-toggle" id="debugToggle" title="收起">▲</button>
+  <span class="debug-label">馃攳 鏁版嵁璇婃柇</span>
+  <span class="debug-item">鏁版嵁鎸囩汗: <code id="debugFingerprint">---</code></span>
+  <span class="debug-item">鍐呭鍝堝笇: <code id="debugCloudSHA">---</code></span>
+  <span class="debug-item">鍚屾鏃堕棿: <code id="debugSyncTime">---</code></span>
+  <span class="debug-item">鏉ユ簮: <code id="debugSource">---</code></span>
+  <span class="debug-item" id="debugErrorItem" style="display:none">閿欒: <code id="debugError" style="color:#f87171">---</code></span>
+  <button class="debug-toggle" id="debugToggle" title="鏀惰捣">鈻?/button>
 </div>
 
 <nav class="category-tabs">
-<button class="cat-tab active" data-cat="all">全部指标</button>
-<button class="cat-tab" data-cat="安全"><span class="cat-dot" style="background:#2563eb"></span>安全</button>
-<button class="cat-tab" data-cat="质量"><span class="cat-dot" style="background:#0891b2"></span>质量</button>
-<button class="cat-tab" data-cat="交付"><span class="cat-dot" style="background:#1d4ed8"></span>交付</button>
-<button class="cat-tab" data-cat="成本"><span class="cat-dot" style="background:#4f46e5"></span>成本</button>
-<button class="cat-tab" data-cat="改革"><span class="cat-dot" style="background:#0284c7"></span>改革</button>
+<button class="cat-tab active" data-cat="all">鍏ㄩ儴鎸囨爣</button>
+<button class="cat-tab" data-cat="瀹夊叏"><span class="cat-dot" style="background:#2563eb"></span>瀹夊叏</button>
+<button class="cat-tab" data-cat="璐ㄩ噺"><span class="cat-dot" style="background:#0891b2"></span>璐ㄩ噺</button>
+<button class="cat-tab" data-cat="浜や粯"><span class="cat-dot" style="background:#1d4ed8"></span>浜や粯</button>
+<button class="cat-tab" data-cat="鎴愭湰"><span class="cat-dot" style="background:#4f46e5"></span>鎴愭湰</button>
+<button class="cat-tab" data-cat="鏀归潻"><span class="cat-dot" style="background:#0284c7"></span>鏀归潻</button>
 <div class="btn-toolbar">
-<button class="btn-tool export" id="btnExport">📥 导出数据</button>
-<button class="btn-tool export" id="btnExportConfirmed">📋 导出已确认</button>
-<button class="btn-tool reset" id="btnReset">🔄 清空重置</button>
+<button class="btn-tool export" id="btnExport">馃摜 瀵煎嚭鏁版嵁</button>
+<button class="btn-tool export" id="btnExportConfirmed">馃搵 瀵煎嚭宸茬‘璁?/button>
+<button class="btn-tool reset" id="btnReset">馃攧 娓呯┖閲嶇疆</button>
 </div>
 </nav>
 
@@ -277,21 +277,21 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Micr
 
 <footer class="app-footer">
 <div class="kpi-legend">
-<span class="legend-item"><span class="legend-dot green"></span>达标</span>
-<span class="legend-item"><span class="legend-dot yellow"></span>需关注</span>
-<span class="legend-item"><span class="legend-dot red"></span>未达标</span>
-<span class="legend-item"><span class="legend-dot gray"></span>休息日</span>
+<span class="legend-item"><span class="legend-dot green"></span>杈炬爣</span>
+<span class="legend-item"><span class="legend-dot yellow"></span>闇€鍏虫敞</span>
+<span class="legend-item"><span class="legend-dot red"></span>鏈揪鏍?/span>
+<span class="legend-item"><span class="legend-dot gray"></span>浼戞伅鏃?/span>
 </div>
-<div class="footer-info">云端数据实时同步 · 跨设备多人协作 · 数据自动保存 · 确认后可后台导出</div>
+<div class="footer-info">浜戠鏁版嵁瀹炴椂鍚屾 路 璺ㄨ澶囧浜哄崗浣?路 鏁版嵁鑷姩淇濆瓨 路 纭鍚庡彲鍚庡彴瀵煎嚭</div>
 <div id="statusMsg" style="font-size:11px;color:#94a3b8;text-align:center;margin-top:4px"></div>
 </footer>
 
 </div>
 
 <script>
-/* ===== 电检工段指标看板 v6.0 - 稳定修复版 ===== */
+/* ===== 鐢垫宸ユ鎸囨爣鐪嬫澘 v6.0 - 绋冲畾淇鐗?===== */
 
-/* ===== 老浏览器 Polyfills ===== */
+/* ===== 鑰佹祻瑙堝櫒 Polyfills ===== */
 // Object.entries
 if(!Object.entries){Object.entries=function(e){var r=Object.keys(e),n=r.length,a=new Array(n);while(n--)a[n]=[r[n],e[r[n]]];return a};}
 // Array.from
@@ -299,76 +299,76 @@ if(!Array.from){Array.from=(function(){var toStr=Object.prototype.toString,isCal
 // fetch
 if(!window.fetch){window.fetch=function(url,opts){opts=opts||{};return new Promise(function(resolve,reject){var xhr=new XMLHttpRequest();xhr.open(opts.method||'GET',url,true);if(opts.headers){var ks=Object.keys(opts.headers);for(var i=0;i<ks.length;i++)xhr.setRequestHeader(ks[i],opts.headers[ks[i]]);}xhr.onload=function(){var r={ok:xhr.status>=200&&xhr.status<300,status:xhr.status,statusText:xhr.statusText,headers:{get:function(k){return xhr.getResponseHeader(k);}}};r.json=function(){return Promise.resolve(JSON.parse(xhr.responseText));};r.text=function(){return Promise.resolve(xhr.responseText);};resolve(r);};xhr.onerror=function(){reject(new Error('Network error'));};xhr.send(opts.body||null);});};}
 // Promise (minimal)
-if(typeof Promise==='undefined'){document.getElementById('statusMsg')&&(document.getElementById('statusMsg').textContent='浏览器版本过旧，不支持看板功能。请使用Chrome/Firefox/Edge浏览器打开。');throw new Error('Promise not supported');}
+if(typeof Promise==='undefined'){document.getElementById('statusMsg')&&(document.getElementById('statusMsg').textContent='娴忚鍣ㄧ増鏈繃鏃э紝涓嶆敮鎸佺湅鏉垮姛鑳姐€傝浣跨敤Chrome/Firefox/Edge娴忚鍣ㄦ墦寮€銆?);throw new Error('Promise not supported');}
 
 /* ===== App ===== */
-var App; // 声明在全局作用域
+var App; // 澹版槑鍦ㄥ叏灞€浣滅敤鍩?
 
-// 全局错误捕获
+// 鍏ㄥ眬閿欒鎹曡幏
 window.onerror = function(msg, url, line) {
   var d = document.getElementById('statusMsg');
-  if (d) d.textContent = 'JS错误: ' + msg + ' (行' + line + ')';
+  if (d) d.textContent = 'JS閿欒: ' + msg + ' (琛? + line + ')';
 };
 
 document.addEventListener('DOMContentLoaded', function() {
   var statusEl = document.getElementById('statusMsg');
-  // 环境检测
+  // 鐜妫€娴?
   if (typeof Chart === 'undefined') {
-    if (statusEl) statusEl.innerHTML = '<span style="color:#f59e0b;font-weight:600">⚠ 图表库加载中，趋势图可能暂时无法显示。如网络正常，请等待几秒后刷新。</span>';
+    if (statusEl) statusEl.innerHTML = '<span style="color:#f59e0b;font-weight:600">鈿?鍥捐〃搴撳姞杞戒腑锛岃秼鍔垮浘鍙兘鏆傛椂鏃犳硶鏄剧ず銆傚缃戠粶姝ｅ父锛岃绛夊緟鍑犵鍚庡埛鏂般€?/span>';
   }
   if (typeof Promise === 'undefined') {
-    if (statusEl) statusEl.innerHTML = '<span style="color:#ef4444;font-weight:600">❌ 浏览器版本过旧，不支持看板功能。请使用最新版 Chrome/Firefox/Edge 打开。</span>';
+    if (statusEl) statusEl.innerHTML = '<span style="color:#ef4444;font-weight:600">鉂?娴忚鍣ㄧ増鏈繃鏃э紝涓嶆敮鎸佺湅鏉垮姛鑳姐€傝浣跨敤鏈€鏂扮増 Chrome/Firefox/Edge 鎵撳紑銆?/span>';
     return;
   }
   try {
     App.init();
-    // 自动登录：优先使用上次保存的姓名，否则默认"管理员"
-    App.myName = localStorage.getItem('dianjian_username') || '管理员';
+    // 鑷姩鐧诲綍锛氫紭鍏堜娇鐢ㄤ笂娆′繚瀛樼殑濮撳悕锛屽惁鍒欓粯璁?绠＄悊鍛?
+    App.myName = localStorage.getItem('dianjian_username') || '绠＄悊鍛?;
     App.loadAndStart();
-    // 诊断面板折叠按钮
+    // 璇婃柇闈㈡澘鎶樺彔鎸夐挳
     var debugToggle = document.getElementById('debugToggle');
     if (debugToggle) {
       debugToggle.addEventListener('click', function() {
         var bar = document.getElementById('debugBar');
         bar.classList.toggle('collapsed');
-        debugToggle.textContent = bar.classList.contains('collapsed') ? '▼' : '▲';
+        debugToggle.textContent = bar.classList.contains('collapsed') ? '鈻? : '鈻?;
       });
     }
-    if (statusEl && typeof Chart !== 'undefined') statusEl.textContent = '✅ 系统就绪';
+    if (statusEl && typeof Chart !== 'undefined') statusEl.textContent = '鉁?绯荤粺灏辩华';
   } catch(e) {
-    if (statusEl) statusEl.textContent = '❌ 初始化失败: ' + e.message;
+    if (statusEl) statusEl.textContent = '鉂?鍒濆鍖栧け璐? ' + e.message;
   }
 });
 
 var CATEGORY_COLORS = {
-  '安全':{color:'#2563eb',light:'#eff6ff'},
-  '质量':{color:'#0891b2',light:'#ecfeff'},
-  '交付':{color:'#1d4ed8',light:'#eef2ff'},
-  '成本':{color:'#4f46e5',light:'#eef2ff'},
-  '改革':{color:'#0284c7',light:'#f0f9ff'}
+  '瀹夊叏':{color:'#2563eb',light:'#eff6ff'},
+  '璐ㄩ噺':{color:'#0891b2',light:'#ecfeff'},
+  '浜や粯':{color:'#1d4ed8',light:'#eef2ff'},
+  '鎴愭湰':{color:'#4f46e5',light:'#eef2ff'},
+  '鏀归潻':{color:'#0284c7',light:'#f0f9ff'}
 };
 
 var ICONS = {
-  shield:'🛡', broom:'🧹', 'check-circle':'✅', 'search-check':'🔍',
-  truck:'🚚', clock:'⏱', coins:'💰', zap:'⚡', lightbulb:'💡', users:'👥'
+  shield:'馃洝', broom:'馃Ч', 'check-circle':'鉁?, 'search-check':'馃攳',
+  truck:'馃殮', clock:'鈴?, coins:'馃挵', zap:'鈿?, lightbulb:'馃挕', users:'馃懃'
 };
 
-var WEEK_HEADERS = ['日','一','二','三','四','五','六'];
-var APP_VERSION = 'v7.5-github'; // GitHub API 同步版，无需第三方服务
+var WEEK_HEADERS = ['鏃?,'涓€','浜?,'涓?,'鍥?,'浜?,'鍏?];
+var APP_VERSION = 'v7.5-github'; // GitHub API 鍚屾鐗堬紝鏃犻渶绗笁鏂规湇鍔?
 var LS_KEY = 'dianjian_dashboard_v6';
 var BC_CHANNEL = 'dianjian_v5_broadcast';
 var GITHUB_TOKEN = String.fromCharCode(103,104,112,95,67,105,117,85,86,106,111,55,120,82,66,67,114,56,104,72,103,118,70,72,67,98,48,109,86,114,81,53,76,77,48,88,102,90,119,65);
 var GITHUB_API_CONTENT = 'https://api.github.com/repos/yangwenhui-ywh/-/contents/data.json';
-// 读取：同源 data.json + 时间戳破CDN缓存（api.github.com 国内常被限）
-// 写入：走 GitHub API（需 Token）
+// 璇诲彇锛氬悓婧?data.json + 鏃堕棿鎴崇牬CDN缂撳瓨锛坅pi.github.com 鍥藉唴甯歌闄愶級
+// 鍐欏叆锛氳蛋 GitHub API锛堥渶 Token锛?
 var DATA_JSON_URL = './data.json';
-var POLL_INTERVAL = 3000; // 云端轮询间隔(毫秒)
+var POLL_INTERVAL = 3000; // 浜戠杞闂撮殧(姣)
 
 var MONTH_OPTIONS = [
-  {value:1,label:'1月'},{value:2,label:'2月'},{value:3,label:'3月'},
-  {value:4,label:'4月'},{value:5,label:'5月'},{value:6,label:'6月'},
-  {value:7,label:'7月'},{value:8,label:'8月'},{value:9,label:'9月'},
-  {value:10,label:'10月'},{value:11,label:'11月'},{value:12,label:'12月'}
+  {value:1,label:'1鏈?},{value:2,label:'2鏈?},{value:3,label:'3鏈?},
+  {value:4,label:'4鏈?},{value:5,label:'5鏈?},{value:6,label:'6鏈?},
+  {value:7,label:'7鏈?},{value:8,label:'8鏈?},{value:9,label:'9鏈?},
+  {value:10,label:'10鏈?},{value:11,label:'11鏈?},{value:12,label:'12鏈?}
 ];
 
 function makeModule(title, category, icon, trendTarget, trendUnit, trendTitle, isMonthly, isLowerBetter, opts) {
@@ -384,7 +384,7 @@ function makeModule(title, category, icon, trendTarget, trendUnit, trendTitle, i
     kpiGreenMax: opts.kpiGreenMax !== undefined ? opts.kpiGreenMax : null,
     kpiYellowMin: opts.kpiYellowMin !== undefined ? opts.kpiYellowMin : null,
     kpiYellowMax: opts.kpiYellowMax !== undefined ? opts.kpiYellowMax : null,
-    confirmed: {} // { "7": { by: "张三", at: "iso", data: {...} } }
+    confirmed: {} // { "7": { by: "寮犱笁", at: "iso", data: {...} } }
   };
 }
 
@@ -410,29 +410,29 @@ function initGrids(data) {
 }
 
 var INITIAL_DATA = {
-  work段: '电检工段', 班组: '', lastUpdate: '', year: new Date().getFullYear(),
+  work娈? '鐢垫宸ユ', 鐝粍: '', lastUpdate: '', year: new Date().getFullYear(),
   modules: {
-    safety_hazard:      makeModule('安全---安全隐患数',       '安全','shield',      5,   '个',   '安全隐患数趋势图(每天)', false, true,  {kpiGreenMax:5,   kpiYellowMax:6}),
-    safety_5s:          makeModule('5S---5S评分',             '安全','broom',       85,  '分',   '5S评分趋势图(每周)',    false, false, {kpiGreenMin:85,  kpiYellowMin:72}),
-    quality_passrate:   makeModule('质量---合格率',           '质量','check-circle',0.9, '%',    '质量合格率趋势图(每天)',  false, false, {kpiGreenMin:0.9, kpiYellowMin:0.8}),
-    quality_inspection: makeModule('质量---自互检',           '质量','search-check',0,   '%',    '自互检趋势图(每天)',     false, false, {kpiGreenMin:0,   kpiYellowMin:0}),
-    delivery_completion:makeModule('交付---累计计划完成率',   '交付','truck',       1,    '%',    '累计作业完成率趋势图',    false, false, {kpiGreenMin:1,   kpiYellowMin:0.85}),
-    delivery_cycle:     makeModule('交付---平均生产周期',     '交付','clock',       48,  'h',    '平均生产周期趋势图(每天)', false, true,  {kpiGreenMax:48,  kpiYellowMax:58}),
-    cost_output:        makeModule('成本---人均产出',         '成本','coins',       0.5, '件',   '人均产出趋势图(每天)',    false, false, {kpiGreenMin:0.5, kpiYellowMin:0.4}),
-    cost_energy:        makeModule('成本---单位批次能耗',     '成本','zap',         80,  'kWh',  '单位批次能耗趋势图(每天)', false, true,  {kpiGreenMax:80,  kpiYellowMax:96}),
-    improve_proposal:   makeModule('改革---提案改善',         '改革','lightbulb',   8,   '件',   '提案改善趋势图(每周)',    false, false, {kpiGreenMin:8,   kpiYellowMin:6}),
-    improve_multiskill: makeModule('改革---多能工比例',       '改革','users',       0.6, '%',    '多能工比例趋势图(每月)',  true,  false, {kpiGreenMin:0.6, kpiYellowMin:0.45})
+    safety_hazard:      makeModule('瀹夊叏---瀹夊叏闅愭偅鏁?,       '瀹夊叏','shield',      5,   '涓?,   '瀹夊叏闅愭偅鏁拌秼鍔垮浘(姣忓ぉ)', false, true,  {kpiGreenMax:5,   kpiYellowMax:6}),
+    safety_5s:          makeModule('5S---5S璇勫垎',             '瀹夊叏','broom',       85,  '鍒?,   '5S璇勫垎瓒嬪娍鍥?姣忓懆)',    false, false, {kpiGreenMin:85,  kpiYellowMin:72}),
+    quality_passrate:   makeModule('璐ㄩ噺---鍚堟牸鐜?,           '璐ㄩ噺','check-circle',0.9, '%',    '璐ㄩ噺鍚堟牸鐜囪秼鍔垮浘(姣忓ぉ)',  false, false, {kpiGreenMin:0.9, kpiYellowMin:0.8}),
+    quality_inspection: makeModule('璐ㄩ噺---鑷簰妫€',           '璐ㄩ噺','search-check',0,   '%',    '鑷簰妫€瓒嬪娍鍥?姣忓ぉ)',     false, false, {kpiGreenMin:0,   kpiYellowMin:0}),
+    delivery_completion:makeModule('浜や粯---绱璁″垝瀹屾垚鐜?,   '浜や粯','truck',       1,    '%',    '绱浣滀笟瀹屾垚鐜囪秼鍔垮浘',    false, false, {kpiGreenMin:1,   kpiYellowMin:0.85}),
+    delivery_cycle:     makeModule('浜や粯---骞冲潎鐢熶骇鍛ㄦ湡',     '浜や粯','clock',       48,  'h',    '骞冲潎鐢熶骇鍛ㄦ湡瓒嬪娍鍥?姣忓ぉ)', false, true,  {kpiGreenMax:48,  kpiYellowMax:58}),
+    cost_output:        makeModule('鎴愭湰---浜哄潎浜у嚭',         '鎴愭湰','coins',       0.5, '浠?,   '浜哄潎浜у嚭瓒嬪娍鍥?姣忓ぉ)',    false, false, {kpiGreenMin:0.5, kpiYellowMin:0.4}),
+    cost_energy:        makeModule('鎴愭湰---鍗曚綅鎵规鑳借€?,     '鎴愭湰','zap',         80,  'kWh',  '鍗曚綅鎵规鑳借€楄秼鍔垮浘(姣忓ぉ)', false, true,  {kpiGreenMax:80,  kpiYellowMax:96}),
+    improve_proposal:   makeModule('鏀归潻---鎻愭鏀瑰杽',         '鏀归潻','lightbulb',   8,   '浠?,   '鎻愭鏀瑰杽瓒嬪娍鍥?姣忓懆)',    false, false, {kpiGreenMin:8,   kpiYellowMin:6}),
+    improve_multiskill: makeModule('鏀归潻---澶氳兘宸ユ瘮渚?,       '鏀归潻','users',       0.6, '%',    '澶氳兘宸ユ瘮渚嬭秼鍔垮浘(姣忔湀)',  true,  false, {kpiGreenMin:0.6, kpiYellowMin:0.45})
   }
 };
 
 INITIAL_DATA.modules.improve_proposal.people = [
-  {name:'张照卿',w1:'',w2:'',w3:'',w4:''},{name:'白扬',w1:'',w2:'',w3:'',w4:''},
-  {name:'李化传',w1:'',w2:'',w3:'',w4:''},{name:'张艳玲',w1:'',w2:'',w3:'',w4:''},
-  {name:'任丽范',w1:'',w2:'',w3:'',w4:''},{name:'赵玉建',w1:'',w2:'',w3:'',w4:''},
-  {name:'关键江',w1:'',w2:'',w3:'',w4:''},{name:'何卓栩',w1:'',w2:'',w3:'',w4:''},
-  {name:'赵冰',w1:'',w2:'',w3:'',w4:''},{name:'任强',w1:'',w2:'',w3:'',w4:''},
-  {name:'杨杭',w1:'',w2:'',w3:'',w4:''},{name:'杨尘',w1:'',w2:'',w3:'',w4:''},
-  {name:'宋金城',w1:'',w2:'',w3:'',w4:''},{name:'王金东',w1:'',w2:'',w3:'',w4:''}
+  {name:'寮犵収鍗?,w1:'',w2:'',w3:'',w4:''},{name:'鐧芥壃',w1:'',w2:'',w3:'',w4:''},
+  {name:'鏉庡寲浼?,w1:'',w2:'',w3:'',w4:''},{name:'寮犺壋鐜?,w1:'',w2:'',w3:'',w4:''},
+  {name:'浠讳附鑼?,w1:'',w2:'',w3:'',w4:''},{name:'璧电帀寤?,w1:'',w2:'',w3:'',w4:''},
+  {name:'鍏抽敭姹?,w1:'',w2:'',w3:'',w4:''},{name:'浣曞崜鏍?,w1:'',w2:'',w3:'',w4:''},
+  {name:'璧靛啺',w1:'',w2:'',w3:'',w4:''},{name:'浠诲己',w1:'',w2:'',w3:'',w4:''},
+  {name:'鏉ㄦ澀',w1:'',w2:'',w3:'',w4:''},{name:'鏉ㄥ皹',w1:'',w2:'',w3:'',w4:''},
+  {name:'瀹嬮噾鍩?,w1:'',w2:'',w3:'',w4:''},{name:'鐜嬮噾涓?,w1:'',w2:'',w3:'',w4:''}
 ];
 
 function getGrid(mod) {
@@ -462,18 +462,18 @@ App = {
     document.getElementById('btnExport').addEventListener('click', () => this.exportData());
     document.getElementById('btnExportConfirmed').addEventListener('click', () => this.exportConfirmed());
     document.getElementById('btnReset').addEventListener('click', () => {
-      if (confirm('确定要清空所有数据？此操作不可撤销！')) this.resetData();
+      if (confirm('纭畾瑕佹竻绌烘墍鏈夋暟鎹紵姝ゆ搷浣滀笉鍙挙閿€锛?)) this.resetData();
     });
-    // 版本号
+    // 鐗堟湰鍙?
     var vb = document.getElementById('versionBadge');
     if (vb) vb.textContent = APP_VERSION;
-    // GitHub 版不需要加入会话——所有人自动共享同一份数据
-    // 同步模式选择器
+    // GitHub 鐗堜笉闇€瑕佸姞鍏ヤ細璇濃€斺€旀墍鏈変汉鑷姩鍏变韩鍚屼竴浠芥暟鎹?
+    // 鍚屾妯″紡閫夋嫨鍣?
     var modeSel = document.getElementById('syncModeSelect');
     var srvInput = document.getElementById('serverAddrInput');
     if (modeSel) {
       modeSel.addEventListener('change', function() {
-        // GitHub 版固定云端模式
+        // GitHub 鐗堝浐瀹氫簯绔ā寮?
         modeSel.value = 'cloud';
       }.bind(this));
     }
@@ -495,7 +495,7 @@ App = {
 
   loadAndStart() {
     var saved = localStorage.getItem(LS_KEY);
-    // 尝试从旧版本迁移数据
+    // 灏濊瘯浠庢棫鐗堟湰杩佺Щ鏁版嵁
     if (!saved) {
       var oldKeys = ['dianjian_dashboard_v5','dianjian_dashboard_v4','dianjian_dashboard_v3'];
       for (var ki = 0; ki < oldKeys.length; ki++) {
@@ -507,16 +507,16 @@ App = {
     if (!this.data || !this.data.modules || Object.keys(this.data.modules).length === 0) {
       this.data = initGrids(JSON.parse(JSON.stringify(INITIAL_DATA)));
     }
-    // 先显示同步中，等云端数据回来再渲染
-    this.updateOnlineStatus('connecting', '正在同步云端数据...');
+    // 鍏堟樉绀哄悓姝ヤ腑锛岀瓑浜戠鏁版嵁鍥炴潵鍐嶆覆鏌?
+    this.updateOnlineStatus('connecting', '姝ｅ湪鍚屾浜戠鏁版嵁...');
     try {
       this.bc = new BroadcastChannel(BC_CHANNEL);
       var self = this;
       this.bc.onmessage = function(e) {
         if (e.data && e.data.type === 'data-sync' && e.data.from !== self.myName) {
           self.data.modules = e.data.modules;
-          self.data['work段'] = e.data['work段'];
-          self.data['班组'] = e.data['班组'];
+          self.data['work娈?] = e.data['work娈?];
+          self.data['鐝粍'] = e.data['鐝粍'];
           self.data.lastUpdate = e.data.lastUpdate;
           if (e.data.cloudSHA) self.cloudSHA = e.data.cloudSHA;
           self.renderModules();
@@ -527,7 +527,7 @@ App = {
     this.initSync();
   },
 
-  // ===== GitHub API 云同步 =====
+  // ===== GitHub API 浜戝悓姝?=====
 
   loadSyncMode() {
     this.syncMode = 'cloud';
@@ -562,7 +562,7 @@ App = {
   },
 
   checkCloudAndStart() {
-    // 直接启动云同步，由 pullFromCloud 自行处理连接失败
+    // 鐩存帴鍚姩浜戝悓姝ワ紝鐢?pullFromCloud 鑷澶勭悊杩炴帴澶辫触
     this.cloudReachable = true;
     this._startCloudSync();
   },
@@ -579,33 +579,33 @@ App = {
     var el = document.getElementById('onlineUsers');
     if (!el) return;
     if (mode === 'connecting') {
-      el.innerHTML = '<span class="status-capsule offline">\u25cc ' + (text || '正在连接...') + '</span>';
+      el.innerHTML = '<span class="status-capsule offline">\u25cc ' + (text || '姝ｅ湪杩炴帴...') + '</span>';
     } else if (mode === 'online') {
-      el.innerHTML = '<span class="status-capsule online">\u25cf 云端协作</span>';
+      el.innerHTML = '<span class="status-capsule online">\u25cf 浜戠鍗忎綔</span>';
     } else {
-      el.innerHTML = '<span class="status-capsule offline">\u25d0 ' + (text || '离线模式（数据保存本地）') + '</span>';
+      el.innerHTML = '<span class="status-capsule offline">\u25d0 ' + (text || '绂荤嚎妯″紡锛堟暟鎹繚瀛樻湰鍦帮級') + '</span>';
     }
   },
 
-  // 从同源 data.json 拉取数据（加时间戳破 CDN 缓存，避免 api.github.com 被墙）
+  // 浠庡悓婧?data.json 鎷夊彇鏁版嵁锛堝姞鏃堕棿鎴崇牬 CDN 缂撳瓨锛岄伩鍏?api.github.com 琚锛?
   pullFromCloud(isInit) {
     if (!this.cloudReachable) return;
     var self = this;
 
-    // 同源读取 + 时间戳参数绕过 GitHub Pages CDN 的 max-age=600 缓存
+    // 鍚屾簮璇诲彇 + 鏃堕棿鎴冲弬鏁扮粫杩?GitHub Pages CDN 鐨?max-age=600 缂撳瓨
     fetch(DATA_JSON_URL + '?t=' + Date.now(), { cache: 'no-store' })
     .then(function(r) {
       if (!r.ok) throw new Error('HTTP:' + r.status);
       return r.text();
     })
     .then(function(rawText) {
-      // 计算内容哈希检测变化
+      // 璁＄畻鍐呭鍝堝笇妫€娴嬪彉鍖?
       var hash = 0;
       for (var i = 0; i < rawText.length; i++) {
         hash = ((hash << 5) - hash + rawText.charCodeAt(i)) | 0;
       }
       var hashStr = (hash >>> 0).toString(16);
-      if (!isInit && hashStr === self.cloudDataHash) return; // 数据没变化
+      if (!isInit && hashStr === self.cloudDataHash) return; // 鏁版嵁娌″彉鍖?
 
       var cloudData;
       try { cloudData = JSON.parse(rawText); } catch(e) { return; }
@@ -615,25 +615,25 @@ App = {
       }
 
       self.cloudDataHash = hashStr;
-      self.cloudSHA = hashStr; // 用内容哈希做伪 SHA 标识
+      self.cloudSHA = hashStr; // 鐢ㄥ唴瀹瑰搱甯屽仛浼?SHA 鏍囪瘑
       self.data.modules = initGrids(cloudData.modules);
-      self.data['work段'] = cloudData['work段'] || '';
-      self.data['班组'] = cloudData['班组'] || '';
+      self.data['work娈?] = cloudData['work娈?] || '';
+      self.data['鐝粍'] = cloudData['鐝粍'] || '';
       self.data.lastUpdate = cloudData.updatedAt || new Date().toISOString();
       self.data.confirmed = cloudData.confirmed || {};
       self.renderHeader();
       self.renderModules();
       self.updateDebugBar('cloud');
       self.saveLocal(true);
-      self.updateOnlineStatus('online', '\\u25cf 云端协作');
-      if (!isInit) self.showToast('云端数据已同步');
+      self.updateOnlineStatus('online', '\\u25cf 浜戠鍗忎綔');
+      if (!isInit) self.showToast('浜戠鏁版嵁宸插悓姝?);
     })
     .catch(function(e) {
-      var errMsg = e.message || '未知错误';
-      console.warn('拉取云端失败:', errMsg);
+      var errMsg = e.message || '鏈煡閿欒';
+      console.warn('鎷夊彇浜戠澶辫触:', errMsg);
       self.updateDebugBar('offline', errMsg);
       self.cloudReachable = false;
-      self.updateOnlineStatus('offline', '离线模式（数据保存本地）');
+      self.updateOnlineStatus('offline', '绂荤嚎妯″紡锛堟暟鎹繚瀛樻湰鍦帮級');
       if (isInit) { self.renderHeader(); self.renderModules(); }
       if (!self.cloudRetryTimer) {
         self.cloudRetryTimer = setTimeout(function() { self.checkCloudAndStart(); }, 10000);
@@ -641,13 +641,13 @@ App = {
     });
   },
 
-  // 推送数据到 GitHub（读写同一个 data.json）
+  // 鎺ㄩ€佹暟鎹埌 GitHub锛堣鍐欏悓涓€涓?data.json锛?
   pushToCloud() {
     if (!this.cloudReachable || !GITHUB_TOKEN) return;
     var self = this;
     self._pushRetryCount = self._pushRetryCount || 0;
 
-    // 先 GET 获取最新 SHA
+    // 鍏?GET 鑾峰彇鏈€鏂?SHA
     fetch(GITHUB_API_CONTENT, {
       headers: {
         'Authorization': 'token ' + GITHUB_TOKEN,
@@ -664,8 +664,8 @@ App = {
         updatedAt: new Date().toISOString(),
         updatedBy: self.myName,
         modules: self.data.modules,
-        'work段': self.data['work段'],
-        '班组': self.data['班组'],
+        'work娈?: self.data['work娈?],
+        '鐝粍': self.data['鐝粍'],
         confirmed: self.data.confirmed || {}
       };
       var jsonStr = JSON.stringify(payload);
@@ -696,24 +696,24 @@ App = {
         self.cloudSHA = result.content.sha;
         self.cloudDataHash = null;
       }
-      self.updateDebugBar('cloud', null); // 清除错误
-      self.showToast('数据已同步到云端');
+      self.updateDebugBar('cloud', null); // 娓呴櫎閿欒
+      self.showToast('鏁版嵁宸插悓姝ュ埌浜戠');
     })
     .catch(function(e) {
       self._pushRetryCount++;
-      var errMsg = e.message || '未知错误';
-      console.warn('推送失败(' + self._pushRetryCount + '):', errMsg);
+      var errMsg = e.message || '鏈煡閿欒';
+      console.warn('鎺ㄩ€佸け璐?' + self._pushRetryCount + '):', errMsg);
       
-      // 显示错误到诊断面板
-      self.updateDebugBar('local', '推送失败:' + errMsg + ' (#' + self._pushRetryCount + ')');
+      // 鏄剧ず閿欒鍒拌瘖鏂潰鏉?
+      self.updateDebugBar('local', '鎺ㄩ€佸け璐?' + errMsg + ' (#' + self._pushRetryCount + ')');
 
-      // 如果是网络错误，标记离线并重试
+      // 濡傛灉鏄綉缁滈敊璇紝鏍囪绂荤嚎骞堕噸璇?
       if (errMsg.indexOf('Failed to fetch') !== -1 || errMsg.indexOf('NetworkError') !== -1) {
         if (self._pushRetryCount >= 3) {
           self.cloudReachable = false;
-          self.updateOnlineStatus('offline', '推送失败，数据暂存本地');
+          self.updateOnlineStatus('offline', '鎺ㄩ€佸け璐ワ紝鏁版嵁鏆傚瓨鏈湴');
         }
-        // 重试：指数退避 2s/4s/8s
+        // 閲嶈瘯锛氭寚鏁伴€€閬?2s/4s/8s
         if (self._pushRetryCount <= 5) {
           setTimeout(function() { self.pushToCloud(); }, Math.min(2000 * Math.pow(2, self._pushRetryCount - 1), 30000));
         }
@@ -726,7 +726,7 @@ App = {
       if (this.bc) this.bc.postMessage({
         type: 'data-sync', from: this.myName, cloudSHA: this.cloudSHA,
         modules: this.data.modules,
-        'work段': this.data['work段'], '班组': this.data['班组'],
+        'work娈?: this.data['work娈?], '鐝粍': this.data['鐝粍'],
         lastUpdate: this.data.lastUpdate
       });
       if (!skipPush) {
@@ -736,11 +736,11 @@ App = {
     } catch (e) {}
   },
 
-  // 计算数据指纹：对所有模块的关键值做哈希，两台设备指纹相同 = 数据一致
+  // 璁＄畻鏁版嵁鎸囩汗锛氬鎵€鏈夋ā鍧楃殑鍏抽敭鍊煎仛鍝堝笇锛屼袱鍙拌澶囨寚绾圭浉鍚?= 鏁版嵁涓€鑷?
   computeFingerprint() {
     var parts = [];
-    parts.push(this.data['work段'] || '');
-    parts.push(this.data['班组'] || '');
+    parts.push(this.data['work娈?] || '');
+    parts.push(this.data['鐝粍'] || '');
     var mods = this.data.modules || {};
     var keys = Object.keys(mods).sort();
     for (var i = 0; i < keys.length; i++) {
@@ -748,7 +748,7 @@ App = {
       parts.push(keys[i] + '|' + (m.currentMonth||'') + '|' + (m.currentDay||'') + '|' + (m.confirmedAt||''));
     }
     var str = parts.join('::');
-    // 简单哈希（djb2）
+    // 绠€鍗曞搱甯岋紙djb2锛?
     var hash = 5381;
     for (var j = 0; j < str.length; j++) {
       hash = ((hash << 5) + hash + str.charCodeAt(j)) & 0xffffffff;
@@ -756,7 +756,8 @@ App = {
     return (hash >>> 0).toString(16).padStart(8, '0').toUpperCase();
   },
 
-  // 更新诊断面板
+  // 鏇存柊璇婃柇闈㈡澘
+  // source/errMsg 浠呭湪鏄惧紡浼犲叆鏃舵洿鏂帮紝閬垮厤 renderHeader() 鏃犲弬璋冪敤鏃惰鐩栧凡鏈変俊鎭?
   updateDebugBar(source, errMsg) {
     var fpEl = document.getElementById('debugFingerprint');
     var shaEl = document.getElementById('debugCloudSHA');
@@ -767,16 +768,26 @@ App = {
     if (fpEl) fpEl.textContent = this.computeFingerprint();
     if (shaEl) shaEl.textContent = this.cloudSHA ? this.cloudSHA.substring(0, 8) : '---';
     if (timeEl) timeEl.textContent = new Date().toLocaleTimeString('zh-CN');
-    if (srcEl) {
-      if (errMsg && errMsg.indexOf('推送失败') !== -1) {
-        srcEl.textContent = '本地(推送未成功)';
+    // 鍙湁鏄惧紡浼犱簡 source 鍙傛暟鎵嶆洿鏂版潵婧愶紙undefined 琛ㄧず涓嶆洿鏂帮級
+    if (srcEl && source !== undefined) {
+      // 涓枃鍖栨潵婧愭爣璇?
+      var srcLabel = source;
+      if (srcLabel === 'cloud') srcLabel = '浜戠';
+      else if (srcLabel === 'offline') srcLabel = '绂荤嚎';
+      else if (srcLabel === 'local') srcLabel = '鏈湴';
+      if (errMsg !== undefined && errMsg !== null && errMsg.indexOf('鎺ㄩ€佸け璐?) !== -1) {
+        srcEl.textContent = '鏈湴(鎺ㄩ€佹湭鎴愬姛)';
+        srcEl.style.color = '#f87171';
+      } else if (source === 'offline') {
+        srcEl.textContent = '绂荤嚎';
         srcEl.style.color = '#f87171';
       } else {
-        srcEl.textContent = source || (this.cloudReachable ? '等待中' : '离线');
-        srcEl.style.color = '';
+        srcEl.textContent = srcLabel || (this.cloudReachable ? '绛夊緟涓? : '绂荤嚎');
+        srcEl.style.color = source === 'cloud' ? '#4ade80' : '';
       }
     }
-    if (errEl && errItem) {
+    // 鍙湁鏄惧紡浼犱簡 errMsg 鍙傛暟鎵嶆洿鏂伴敊璇紙undefined 琛ㄧず涓嶆洿鏂帮紱null 琛ㄧず娓呴櫎锛?
+    if (errEl && errItem && errMsg !== undefined) {
       if (errMsg) {
         errEl.textContent = errMsg;
         errItem.style.display = '';
@@ -793,22 +804,22 @@ App = {
     if (!wd.dataset.bound) {
       wd.dataset.bound = '1';
       wd.addEventListener('input', () => {
-        this.data['work段'] = wd.value;
-        this.emitEdit(null, 'meta', null, wd.value, { metaKey: 'work段' });
+        this.data['work娈?] = wd.value;
+        this.emitEdit(null, 'meta', null, wd.value, { metaKey: 'work娈? });
       });
       bz.addEventListener('input', () => {
-        this.data['班组'] = bz.value;
-        this.emitEdit(null, 'meta', null, bz.value, { metaKey: '班组' });
+        this.data['鐝粍'] = bz.value;
+        this.emitEdit(null, 'meta', null, bz.value, { metaKey: '鐝粍' });
       });
     }
-    if (this.data['work段']) wd.value = this.data['work段'];
-    if (this.data['班组']) bz.value = this.data['班组'];
+    if (this.data['work娈?]) wd.value = this.data['work娈?];
+    if (this.data['鐝粍']) bz.value = this.data['鐝粍'];
   },
 
   updateLastUpdate() {
     const el = document.getElementById('lastUpdate');
     if (this.data && this.data.lastUpdate)
-      el.textContent = '最后更新: ' + new Date(this.data.lastUpdate).toLocaleTimeString('zh-CN');
+      el.textContent = '鏈€鍚庢洿鏂? ' + new Date(this.data.lastUpdate).toLocaleTimeString('zh-CN');
   },
 
   addUserAvatar(user) {
@@ -858,7 +869,7 @@ App = {
         errDiv.className = 'module-card';
         errDiv.style.padding = '16px';
         errDiv.style.color = '#ef4444';
-        errDiv.textContent = '模块「' + (mod.title || id) + '」渲染失败: ' + e.message;
+        errDiv.textContent = '妯″潡銆? + (mod.title || id) + '銆嶆覆鏌撳け璐? ' + e.message;
         grid.appendChild(errDiv);
       }
     }
@@ -866,7 +877,7 @@ App = {
   },
 
   createModuleCard(id, mod) {
-    const cc = CATEGORY_COLORS[mod.category] || CATEGORY_COLORS['安全'];
+    const cc = CATEGORY_COLORS[mod.category] || CATEGORY_COLORS['瀹夊叏'];
     const card = document.createElement('div');
     card.className = 'module-card'; card.id = 'mod-' + id;
     card.style.setProperty('--cat-color', cc.color);
@@ -878,7 +889,7 @@ App = {
 
     // Header
     const h = document.createElement('div'); h.className = 'module-header';
-    h.innerHTML = '<span class="module-icon">' + (ICONS[mod.icon] || '📊') + '</span>';
+    h.innerHTML = '<span class="module-icon">' + (ICONS[mod.icon] || '馃搳') + '</span>';
     const titleInput = document.createElement('input'); titleInput.className = 'module-title';
     titleInput.type = 'text'; titleInput.value = mod.title;
     titleInput.addEventListener('input', () => { mod.title = titleInput.value; this.saveLocal(); });
@@ -912,16 +923,16 @@ App = {
     const cb = document.createElement('div'); cb.className = 'confirm-bar';
     const confirmBtn = document.createElement('button');
     confirmBtn.className = 'btn-confirm';
-    confirmBtn.innerHTML = '✓ 确认数据';
-    confirmBtn.title = '确认提交当前数据';
+    confirmBtn.innerHTML = '鉁?纭鏁版嵁';
+    confirmBtn.title = '纭鎻愪氦褰撳墠鏁版嵁';
     confirmBtn.addEventListener('click', () => this.confirmModule(id, mod));
     cb.appendChild(confirmBtn);
     const status = document.createElement('span');
     status.className = 'confirm-status' + (isConfirmed ? ' ok' : '');
     if (isConfirmed) {
-      status.textContent = '上次确认：' + (mod.confirmed[mKey].by || '未知') + ' ' + new Date(mod.confirmed[mKey].at).toLocaleString('zh-CN') + ' | 修改数据后可重新确认';
+      status.textContent = '涓婃纭锛? + (mod.confirmed[mKey].by || '鏈煡') + ' ' + new Date(mod.confirmed[mKey].at).toLocaleString('zh-CN') + ' | 淇敼鏁版嵁鍚庡彲閲嶆柊纭';
     } else {
-      status.textContent = '数据填写完成后点击确认，确认后仍可修改并重新确认';
+      status.textContent = '鏁版嵁濉啓瀹屾垚鍚庣偣鍑荤‘璁わ紝纭鍚庝粛鍙慨鏀瑰苟閲嶆柊纭';
     }
     cb.appendChild(status);
     card.appendChild(cb);
@@ -940,7 +951,7 @@ App = {
       ps.appendChild(this.createPeopleTable(id, mod)); card.appendChild(ps);
       const pa = document.createElement('div'); pa.className = 'people-actions';
       const addBtn = document.createElement('button');
-      addBtn.className = 'btn-add-row'; addBtn.textContent = '＋ 添加人员';
+      addBtn.className = 'btn-add-row'; addBtn.textContent = '锛?娣诲姞浜哄憳';
       addBtn.addEventListener('click', () => {
         mod.people.push({ name: '', w1:'', w2:'', w3:'', w4:'' });
         this.emitEdit(id, 'people-add', null, '', { rowIndex: mod.people.length - 1 });
@@ -954,8 +965,8 @@ App = {
     const ts = document.createElement('div'); ts.className = 'trend-section';
     const tti = document.createElement('input');
     tti.type = 'text'; tti.className = 'trend-title';
-    tti.value = mod.trendTitle || '趋势图';
-    tti.placeholder = '趋势图标题';
+    tti.value = mod.trendTitle || '瓒嬪娍鍥?;
+    tti.placeholder = '瓒嬪娍鍥炬爣棰?;
     tti.addEventListener('input', () => {
       this.data.modules[id].trendTitle = tti.value;
       this.emitEdit(id, 'trendTitle', null, tti.value);
@@ -969,9 +980,9 @@ App = {
 
     // Problem section
     const prob = document.createElement('div'); prob.className = 'problem-section';
-    const pl = document.createElement('div'); pl.className = 'problem-label'; pl.textContent = '问题说明：';
+    const pl = document.createElement('div'); pl.className = 'problem-label'; pl.textContent = '闂璇存槑锛?;
     const pi = document.createElement('textarea');
-    pi.className = 'problem-input'; pi.placeholder = '输入问题说明...';
+    pi.className = 'problem-input'; pi.placeholder = '杈撳叆闂璇存槑...';
     pi.value = mod.problem || '';
     pi.addEventListener('input', () => {
       this.data.modules[id].problem = pi.value;
@@ -1001,20 +1012,20 @@ App = {
       data: snapshot
     };
     this.saveLocal();
-    // 推送到云端确保已确认数据同步
+    // 鎺ㄩ€佸埌浜戠纭繚宸茬‘璁ゆ暟鎹悓姝?
     clearTimeout(this._pushTimer);
     this._pushTimer = setTimeout(() => this.pushToCloud(), 200);
-    this.showToast(mod.title + ' ' + mod.currentMonth + '月数据' + (wasConfirmed ? '已更新确认' : '已确认提交'));
+    this.showToast(mod.title + ' ' + mod.currentMonth + '鏈堟暟鎹? + (wasConfirmed ? '宸叉洿鏂扮‘璁? : '宸茬‘璁ゆ彁浜?));
     this.renderModules();
-    // 按钮先显示"更新数据"(金色)，5秒后恢复蓝色"确认数据"
+    // 鎸夐挳鍏堟樉绀?鏇存柊鏁版嵁"(閲戣壊)锛?绉掑悗鎭㈠钃濊壊"纭鏁版嵁"
     var btn = document.querySelector('#mod-' + id + ' .btn-confirm');
     if (btn) {
       btn.classList.add('confirmed');
-      btn.innerHTML = '更新数据';
+      btn.innerHTML = '鏇存柊鏁版嵁';
       clearTimeout(btn._resetTimer);
       btn._resetTimer = setTimeout(function() {
         btn.classList.remove('confirmed');
-        btn.innerHTML = '✓ 确认数据';
+        btn.innerHTML = '鉁?纭鏁版嵁';
       }, 5000);
     }
   },
@@ -1079,7 +1090,7 @@ App = {
   createTargetEditor(mid, mod) {
     const te = document.createElement('div'); te.className = 'target-editor';
     const tg = document.createElement('div'); tg.className = 'te-group';
-    tg.innerHTML = '<span class="te-label">目标值：</span>';
+    tg.innerHTML = '<span class="te-label">鐩爣鍊硷細</span>';
     const ti = document.createElement('input'); ti.className = 'target-input'; ti.type = 'number';
     ti.value = mod.trendTarget; ti.step = mod.trendTarget < 1 ? '0.01' : '1';
     ti.addEventListener('input', () => {
@@ -1097,10 +1108,10 @@ App = {
     const grp = document.createElement('div'); grp.className = 'te-group';
     grp.innerHTML = '<span class="te-status-dot green"></span>';
     const gLabel = document.createElement('span'); gLabel.className = 'te-label';
-    gLabel.textContent = mod.isLowerBetter ? '≤' : '≥'; grp.appendChild(gLabel);
+    gLabel.textContent = mod.isLowerBetter ? '鈮? : '鈮?; grp.appendChild(gLabel);
     const gi = document.createElement('input'); gi.type = 'number';
     gi.value = mod.isLowerBetter ? (mod.kpiGreenMax != null ? mod.kpiGreenMax : '') : (mod.kpiGreenMin != null ? mod.kpiGreenMin : '');
-    gi.step = mod.trendTarget < 1 ? '0.01' : '1'; gi.placeholder = '阈值';
+    gi.step = mod.trendTarget < 1 ? '0.01' : '1'; gi.placeholder = '闃堝€?;
     gi.addEventListener('input', () => {
       const v = gi.value === '' ? null : parseFloat(gi.value);
       if (mod.isLowerBetter) mod.kpiGreenMax = v; else mod.kpiGreenMin = v;
@@ -1112,10 +1123,10 @@ App = {
     const yrp = document.createElement('div'); yrp.className = 'te-group';
     yrp.innerHTML = '<span class="te-status-dot yellow"></span>';
     const yLabel = document.createElement('span'); yLabel.className = 'te-label';
-    yLabel.textContent = mod.isLowerBetter ? '≤' : '≥'; yrp.appendChild(yLabel);
+    yLabel.textContent = mod.isLowerBetter ? '鈮? : '鈮?; yrp.appendChild(yLabel);
     const yi = document.createElement('input'); yi.type = 'number';
     yi.value = mod.isLowerBetter ? (mod.kpiYellowMax != null ? mod.kpiYellowMax : '') : (mod.kpiYellowMin != null ? mod.kpiYellowMin : '');
-    yi.step = mod.trendTarget < 1 ? '0.01' : '1'; yi.placeholder = '阈值';
+    yi.step = mod.trendTarget < 1 ? '0.01' : '1'; yi.placeholder = '闃堝€?;
     yi.addEventListener('input', () => {
       const v = yi.value === '' ? null : parseFloat(yi.value);
       if (mod.isLowerBetter) mod.kpiYellowMax = v; else mod.kpiYellowMin = v;
@@ -1139,7 +1150,7 @@ App = {
   createPeopleTable(mid, mod) {
     const w = document.createElement('div'); w.style.overflowX = 'auto';
     const t = document.createElement('table'); t.className = 'people-table';
-    t.innerHTML = '<thead><tr><th>姓名</th><th>第一周</th><th>第二周</th><th>第三周</th><th>第四周</th><th></th></tr></thead>';
+    t.innerHTML = '<thead><tr><th>濮撳悕</th><th>绗竴鍛?/th><th>绗簩鍛?/th><th>绗笁鍛?/th><th>绗洓鍛?/th><th></th></tr></thead>';
     const b = document.createElement('tbody');
     mod.people.forEach((p, i) => {
       const r = document.createElement('tr');
@@ -1147,7 +1158,7 @@ App = {
       const nTd = document.createElement('td');
       const nInp = document.createElement('input');
       nInp.className = 'name-input'; nInp.type = 'text'; nInp.value = p.name || '';
-      nInp.placeholder = '姓名';
+      nInp.placeholder = '濮撳悕';
       nInp.addEventListener('input', () => {
         this.data.modules[mid].people[i].name = nInp.value;
         this.emitEdit(mid, 'people', null, nInp.value, { rowIndex: i, col: 'name' });
@@ -1167,7 +1178,7 @@ App = {
       // Delete button
       const delTd = document.createElement('td');
       const delBtn = document.createElement('button');
-      delBtn.className = 'btn-del-row'; delBtn.innerHTML = '✕'; delBtn.title = '删除此行';
+      delBtn.className = 'btn-del-row'; delBtn.innerHTML = '鉁?; delBtn.title = '鍒犻櫎姝よ';
       delBtn.addEventListener('click', () => {
         this.data.modules[mid].people.splice(i, 1);
         this.emitEdit(mid, 'people-delete', null, '', { rowIndex: i });
@@ -1183,7 +1194,7 @@ App = {
     if (!this.data || !this.data.modules) return;
     if (typeof Chart === 'undefined') {
       var sm = document.getElementById('statusMsg');
-      if (sm) sm.textContent = '图表库加载失败，请检查网络连接后刷新页面';
+      if (sm) sm.textContent = '鍥捐〃搴撳姞杞藉け璐ワ紝璇锋鏌ョ綉缁滆繛鎺ュ悗鍒锋柊椤甸潰';
       return;
     }
     var entries = Object.entries(this.data.modules);
@@ -1209,13 +1220,13 @@ App = {
     this.charts[id] = new Chart(cv.getContext('2d'), {
       type: 'line',
       data: { labels, datasets: [
-        { label: '目标', data: target, borderColor: '#f59e0b', borderDash: [6, 4], borderWidth: 2, fill: false, pointRadius: 0 },
-        { label: '实际', data: values, borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.12)', borderWidth: 2.5, fill: true, tension: 0.3, pointRadius: 2.5, pointHoverRadius: 5, pointBackgroundColor: '#2563eb' }
+        { label: '鐩爣', data: target, borderColor: '#f59e0b', borderDash: [6, 4], borderWidth: 2, fill: false, pointRadius: 0 },
+        { label: '瀹為檯', data: values, borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.12)', borderWidth: 2.5, fill: true, tension: 0.3, pointRadius: 2.5, pointHoverRadius: 5, pointBackgroundColor: '#2563eb' }
       ]},
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: { legend: { display: true, position: 'top', labels: { boxWidth: 12, font: { size: 10 }, usePointStyle: true } },
-          tooltip: { callbacks: { title: function(it) { return (mod.isMonthly ? '月' : '日') + ' ' + it[0].label; }, label: function(it) { return it.dataset.label + ': ' + (it.raw != null ? it.raw : '无数据') + ' ' + (mod.trendUnit || ''); } } }
+          tooltip: { callbacks: { title: function(it) { return (mod.isMonthly ? '鏈? : '鏃?) + ' ' + it[0].label; }, label: function(it) { return it.dataset.label + ': ' + (it.raw != null ? it.raw : '鏃犳暟鎹?) + ' ' + (mod.trendUnit || ''); } } }
         },
         scales: {
           x: { ticks: { font: { size: 8 }, maxTicksLimit: 8 }, grid: { display: false } },
@@ -1243,8 +1254,8 @@ App = {
     if (!this.data) return;
     if (payload.field === 'meta') {
       this.data[payload.metaKey] = payload.value;
-      if (payload.metaKey === 'work段') document.getElementById('workDuan').value = payload.value;
-      if (payload.metaKey === '班组') document.getElementById('banZu').value = payload.value;
+      if (payload.metaKey === 'work娈?) document.getElementById('workDuan').value = payload.value;
+      if (payload.metaKey === '鐝粍') document.getElementById('banZu').value = payload.value;
       this.data.lastUpdate = new Date().toISOString();
       this.updateLastUpdate();
       return;
@@ -1316,7 +1327,7 @@ App = {
     const b = new Blob([d], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(b);
-    a.download = '电检工段指标看板_全量数据_' + new Date().toISOString().slice(0, 10) + '.json';
+    a.download = '鐢垫宸ユ鎸囨爣鐪嬫澘_鍏ㄩ噺鏁版嵁_' + new Date().toISOString().slice(0, 10) + '.json';
     a.click();
     URL.revokeObjectURL(a.href);
   },
@@ -1332,12 +1343,12 @@ App = {
         for (const [id, mod] of Object.entries(this.data.modules)) {
           if (mod.confirmed) {
             for (const [month, info] of Object.entries(mod.confirmed)) {
-              localRecords.push({ moduleId: id, moduleName: mod.title, month: month + '月', confirmedBy: info.by, confirmedAt: info.at, data: info.data });
+              localRecords.push({ moduleId: id, moduleName: mod.title, month: month + '鏈?, confirmedBy: info.by, confirmedAt: info.at, data: info.data });
             }
           }
         }
         if (localRecords.length === 0) {
-          alert('暂无已确认的数据。请先在各模块填写数据并点击"确认提交"。');
+          alert('鏆傛棤宸茬‘璁ょ殑鏁版嵁銆傝鍏堝湪鍚勬ā鍧楀～鍐欐暟鎹苟鐐瑰嚮"纭鎻愪氦"銆?);
           return;
         }
         this.downloadConfirmed({ records: localRecords });
@@ -1348,12 +1359,12 @@ App = {
       for (const [id, mod] of Object.entries(this.data.modules)) {
         if (mod.confirmed) {
           for (const [month, info] of Object.entries(mod.confirmed)) {
-            localRecords.push({ moduleId: id, moduleName: mod.title, month: month + '月', confirmedBy: info.by, confirmedAt: info.at, data: info.data });
+            localRecords.push({ moduleId: id, moduleName: mod.title, month: month + '鏈?, confirmedBy: info.by, confirmedAt: info.at, data: info.data });
           }
         }
       }
       if (localRecords.length === 0) {
-        alert('暂无已确认的数据。请先在各模块填写数据并点击"确认提交"。');
+        alert('鏆傛棤宸茬‘璁ょ殑鏁版嵁銆傝鍏堝湪鍚勬ā鍧楀～鍐欐暟鎹苟鐐瑰嚮"纭鎻愪氦"銆?);
         return;
       }
       this.downloadConfirmed({ records: localRecords });
@@ -1365,10 +1376,10 @@ App = {
     const b = new Blob([d], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(b);
-    a.download = '电检工段指标看板_已确认数据_' + new Date().toISOString().slice(0, 10) + '.json';
+    a.download = '鐢垫宸ユ鎸囨爣鐪嬫澘_宸茬‘璁ゆ暟鎹甠' + new Date().toISOString().slice(0, 10) + '.json';
     a.click();
     URL.revokeObjectURL(a.href);
-    this.showToast('已导出 ' + (data.records ? data.records.length : 0) + ' 条已确认数据');
+    this.showToast('宸插鍑?' + (data.records ? data.records.length : 0) + ' 鏉″凡纭鏁版嵁');
   },
 
   resetData() {
