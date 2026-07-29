@@ -389,7 +389,8 @@ function makeModule(title, category, icon, trendTarget, trendUnit, trendTitle, i
 }
 
 function initGrids(data) {
-  var entries = Object.entries(data.modules);
+  var mods = (data && data.modules) ? data.modules : (data || {}); // 兼容完整 data 对象和纯 modules 对象
+  var entries = Object.entries(mods);
   for (var i = 0; i < entries.length; i++) {
     var id = entries[i][0], mod = entries[i][1];
     var mKey = String(mod.currentMonth);
