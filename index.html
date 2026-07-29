@@ -818,9 +818,9 @@ App = {
     // Confirm bar
     const cb = document.createElement('div'); cb.className = 'confirm-bar';
     const confirmBtn = document.createElement('button');
-    confirmBtn.className = 'btn-confirm' + (isConfirmed ? ' confirmed' : '');
-    confirmBtn.innerHTML = isConfirmed ? '🔄 更新确认' : '✓ 确认提交';
-    confirmBtn.title = isConfirmed ? '数据修改后可重新确认' : '确认提交当前数据';
+    confirmBtn.className = 'btn-confirm';
+    confirmBtn.innerHTML = '✓ 确认数据';
+    confirmBtn.title = '确认提交当前数据';
     confirmBtn.addEventListener('click', () => this.confirmModule(id, mod));
     cb.appendChild(confirmBtn);
     const status = document.createElement('span');
@@ -913,6 +913,17 @@ App = {
     this._pushTimer = setTimeout(() => this.pushToCloud(), 200);
     this.showToast(mod.title + ' ' + mod.currentMonth + '月数据' + (wasConfirmed ? '已更新确认' : '已确认提交'));
     this.renderModules();
+    // 按钮先显示"更新数据"(金色)，5秒后恢复蓝色"确认数据"
+    var btn = document.querySelector('#mod-' + id + ' .btn-confirm');
+    if (btn) {
+      btn.classList.add('confirmed');
+      btn.innerHTML = '更新数据';
+      clearTimeout(btn._resetTimer);
+      btn._resetTimer = setTimeout(function() {
+        btn.classList.remove('confirmed');
+        btn.innerHTML = '✓ 确认数据';
+      }, 5000);
+    }
   },
 
   showToast(msg) {
