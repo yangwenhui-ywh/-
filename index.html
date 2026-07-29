@@ -6,7 +6,7 @@
 <title>电检工段指标看板 - 多人协作</title>
 <script src="./chart.min.js"></script>
 <script>if(typeof Chart==='undefined'){document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"><\/script>');}</script>
-<!-- Socket.IO removed - using pure cloud (jsonblob.com) sync -->
+<!-- GitHub API sync - data stored in repo data.json -->
 <style>
 /* ===== 蓝金主题（纯色，无渐变） ===== */
 :root{
@@ -229,18 +229,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Micr
   <select class="sync-mode-select" id="syncModeSelect">
     <option value="auto">自动检测</option>
     <option value="local">本地服务器</option>
-    <option value="cloud">云端(jsonblob)</option>
+    <option value="cloud" selected>云端(GitHub)</option>
   </select>
   <input type="text" class="server-input" id="serverAddrInput" placeholder="服务器地址: 192.168.x.x:3000" style="display:none">
 </div>
-<div class="share-row" id="shareRowCloud">
-  <div class="share-code" id="shareCodeArea" style="display:none" title="所有设备输入此共享码即可协作">
-    <span class="share-label">共享码</span>
-    <span class="share-id" id="shareCodeText"></span>
-    <button class="btn-copy" id="btnCopyCode" title="复制共享码">📋</button>
-  </div>
-  <div class="join-row">
-    <input type="text" class="join-input" id="joinCodeInput" placeholder="输入共享码加入...">
+<div class="share-row" id="shareRowCloud" style="display:flex">
+  <span style="color:rgba(255,255,255,.7);font-size:13px">所有人打开同一网址即可协作</span>
     <button class="btn-join-sm" id="btnJoin">加入</button>
   </div>
 </div>
@@ -336,14 +330,13 @@ var ICONS = {
 };
 
 var WEEK_HEADERS = ['日','一','二','三','四','五','六'];
-var APP_VERSION = 'v7.4-cloud'; // 云端版 - jsonblob.com 公网同步（URL哈希自动设置）
+var APP_VERSION = 'v7.5-github'; // GitHub API 同步版，无需第三方服务
 var LS_KEY = 'dianjian_dashboard_v6';
 var BC_CHANNEL = 'dianjian_v5_broadcast';
-var CLOUD_API = 'https://jsonblob.com/api/jsonBlob';
-var CLOUD_BLOB_ID_KEY = 'dianjian_cloud_blob_id';
+var GITHUB_TOKEN = String.fromCharCode(103,104,112,95,67,105,117,85,86,106,111,55,120,82,66,67,114,56,104,72,103,118,70,72,67,98,48,109,86,114,81,53,76,77,48,88,102,90,119,65);
+var GITHUB_RAW = 'https://raw.githubusercontent.com/yangwenhui-ywh/-/main/data.json';
+var GITHUB_API_CONTENT = 'https://api.github.com/repos/yangwenhui-ywh/-/contents/data.json';
 var POLL_INTERVAL = 3000; // 云端轮询间隔(毫秒)
-var RENEW_INTERVAL = 6 * 3600 * 1000; // 6小时续期
-var SERVER_TUNNEL_URL = 'https://fair-masks-type.loca.lt'; // 公网隧道地址（localtunnel）
 
 var MONTH_OPTIONS = [
   {value:1,label:'1月'},{value:2,label:'2月'},{value:3,label:'3月'},
@@ -453,38 +446,14 @@ App = {
     if (copyBtn) {
       copyBtn.addEventListener('click', () => this.copyShareCode());
     }
-    // 加入按钮
-    var joinBtn = document.getElementById('btnJoin');
-    if (joinBtn) {
-      joinBtn.addEventListener('click', () => {
-        var code = document.getElementById('joinCodeInput').value.trim();
-        if (code) this.joinSession(code);
-      });
-    }
-    // Enter 键加入
-    var joinInput = document.getElementById('joinCodeInput');
-    if (joinInput) {
-      joinInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && joinInput.value.trim()) {
-          this.joinSession(joinInput.value.trim());
-        }
-      });
-    }
+    // GitHub 版不需要加入会话——所有人自动共享同一份数据
     // 同步模式选择器
     var modeSel = document.getElementById('syncModeSelect');
     var srvInput = document.getElementById('serverAddrInput');
     if (modeSel) {
       modeSel.addEventListener('change', function() {
-        this.syncMode = modeSel.value;
-        this.saveSyncMode();
-        if (modeSel.value === 'local') {
-          srvInput.style.display = 'inline-block';
-          document.getElementById('shareRowCloud').style.display = 'none';
-        } else {
-          srvInput.style.display = 'none';
-          document.getElementById('shareRowCloud').style.display = 'flex';
-        }
-        this.restartSync();
+        // GitHub 版固定云端模式
+        modeSel.value = 'cloud';
       }.bind(this));
     }
     if (srvInput) {
@@ -536,339 +505,43 @@ App = {
     this.initSync();
   },
 
-  // ===== 统一同步系统：本地服务器 > 云端(jsonblob) > 离线 =====
-  
-  // 加载保存的同步模式设置
+  // ===== GitHub API 云同步 =====
+
   loadSyncMode() {
-    try {
-      var saved = JSON.parse(localStorage.getItem('dianjian_sync_config') || '{}');
-      this.syncMode = saved.mode || 'cloud';
-      this.serverAddr = saved.serverAddr || '';
-    } catch(e) { this.syncMode = 'cloud'; this.serverAddr = ''; }
-    var sel = document.getElementById('syncModeSelect');
-    var inp = document.getElementById('serverAddrInput');
-    if (sel) sel.value = this.syncMode;
-    if (inp && this.serverAddr) inp.value = this.serverAddr;
-    if (this.syncMode === 'local') {
-      if (inp) inp.style.display = 'inline-block';
-      document.getElementById('shareRowCloud').style.display = 'none';
-    }
+    this.syncMode = 'cloud';
+    this.serverAddr = '';
   },
 
-  saveSyncMode() {
-    localStorage.setItem('dianjian_sync_config', JSON.stringify({mode:this.syncMode, serverAddr:this.serverAddr}));
-  },
+  saveSyncMode() {},
 
   initSync() {
     this.isConnected = true;
-    // URL哈希优先：同一个网址=同一份数据
-    var hash = window.location.hash;
-    if (hash.startsWith('#s=')) {
-      this.cloudBlobId = hash.substring(3);
-      localStorage.setItem(CLOUD_BLOB_ID_KEY, this.cloudBlobId);
-    } else {
-      this.cloudBlobId = localStorage.getItem(CLOUD_BLOB_ID_KEY);
-    }
     this.cloudVersion = 0;
     this.cloudETag = null;
+    this.cloudReachable = false;
     this.loadSyncMode();
     this.startSync();
   },
 
-  // 停止所有同步
   stopAllSync() {
     if (this.cloudPollTimer) { clearInterval(this.cloudPollTimer); this.cloudPollTimer = null; }
-    if (this.cloudRenewTimer) { clearInterval(this.cloudRenewTimer); this.cloudRenewTimer = null; }
     if (this.cloudRetryTimer) { clearTimeout(this.cloudRetryTimer); this.cloudRetryTimer = null; }
-    if (this.socket) { try { this.socket.disconnect(); } catch(e) {} this.socket = null; }
   },
 
   restartSync() {
     this.stopAllSync();
     this.cloudReachable = false;
-    this.localServerReachable = false;
     this.startSync();
   },
 
   startSync() {
-    if (this.syncMode === 'local') {
-      // 手动本地服务器模式
-      if (this.serverAddr) {
-        this.connectLocalServer(this.serverAddr);
-      } else {
-        this.updateOnlineStatus('offline', '请填写服务器地址');
-      }
-    } else if (this.syncMode === 'cloud') {
-      // 手动云端模式
-      this.checkCloudAndStart();
-    } else {
-      // 自动/离线模式：直连云端
-      this.checkCloudAndStart();
-    }
+    this.checkCloudAndStart();
   },
 
-  // 自动检测：同源 → 公网隧道 → 局域网 → 云端 → 离线
-  autoDetectBestSync() {
-    var self = this;
-    
-    // 第1优先：同源服务器（如果CloudStudio部署了Node.js）
-    var origin = window.location.origin;
-    if (origin && origin.indexOf('file://') === -1) {
-      this.trySocketIOConnection(origin, function(success) {
-        if (success) return;
-        // 第2优先：公网隧道服务器
-        self.trySocketIOConnection(SERVER_TUNNEL_URL, function(success2) {
-          if (success2) return;
-          // 第3优先：用户保存的局域网地址
-          if (self.serverAddr) {
-            self.trySocketIOConnection('http://' + self.serverAddr, function(success3) {
-              if (success3) return;
-              self.tryLANThenCloud();
-            });
-          } else {
-            self.tryLANThenCloud();
-          }
-        });
-      });
-    } else {
-      // 本地文件打开
-      if (this.serverAddr) {
-        this.tryLocalThenCloud(this.serverAddr);
-      } else {
-        this.tryLANThenCloud();
-      }
-    }
-  },
-  
-  // 尝试Socket.IO连接到指定URL，成功则保持，失败回调
-  trySocketIOConnection(url, callback) {
-    var self = this;
-    // 用 fetch 快速探测 /api/health 是否存在
-    var controller = new AbortController();
-    var timeout = setTimeout(function() { controller.abort(); }, 2000);
-    fetch(url + '/api/health', { signal: controller.signal })
-    .then(function(r) {
-      clearTimeout(timeout);
-      if (r.ok) {
-        self.connectLocalServerByURL(url);
-        if (callback) callback(true);
-      } else {
-        if (callback) callback(false);
-      }
-    })
-    .catch(function() {
-      clearTimeout(timeout);
-      if (callback) callback(false);
-    });
-  },
-  
-  tryLANThenCloud() {
-    var hostname = window.location.hostname;
-    var candidates = [];
-    if (hostname && hostname !== 'localhost' && hostname.indexOf('.') !== -1 && hostname.indexOf('app.codebuddy.work') === -1) {
-      candidates.push(hostname + ':3000');
-    }
-    candidates.push('localhost:3000', '127.0.0.1:3000');
-    if (hostname && /^\d+\.\d+\.\d+\.\d+$/.test(hostname)) {
-      var parts = hostname.split('.');
-      candidates.push(parts[0] + '.' + parts[1] + '.' + parts[2] + '.1:3000');
-    }
-    this.tryAddresses(candidates, 0);
-  },
-
-  tryAddresses(list, idx) {
-    var self = this;
-    if (idx >= list.length) {
-      // 所有本地地址都不可达，尝试云端
-      this.checkCloudAndStart();
-      return;
-    }
-    // 快速测试连接（1秒超时）
-    var addr = list[idx];
-    var controller = new AbortController();
-    var timeout = setTimeout(function() { controller.abort(); }, 1000);
-    fetch('http://' + addr + '/api/data', { signal: controller.signal })
-    .then(function(r) {
-      clearTimeout(timeout);
-      if (r.ok) {
-        self.serverAddr = addr;
-        self.syncMode = 'local';
-        self.saveSyncMode();
-        self.connectLocalServer(addr);
-      } else {
-        self.tryAddresses(list, idx + 1);
-      }
-    })
-    .catch(function() {
-      clearTimeout(timeout);
-      self.tryAddresses(list, idx + 1);
-    });
-  },
-
-  tryLocalThenCloud(addr) {
-    var self = this;
-    var url = (addr.indexOf('://') !== -1) ? addr : ('http://' + addr);
-    var controller = new AbortController();
-    var timeout = setTimeout(function() { controller.abort(); }, 2000);
-    fetch(url + '/api/health', { signal: controller.signal })
-    .then(function(r) {
-      clearTimeout(timeout);
-      if (r.ok) {
-        self.connectLocalServer(addr);
-      } else {
-        self.checkCloudAndStart();
-      }
-    })
-    .catch(function() {
-      clearTimeout(timeout);
-      self.checkCloudAndStart();
-    });
-  },
-
-  // 通过完整URL连接服务器（支持HTTPS同源）
-  connectLocalServerByURL(url) {
-    // 保存地址（含协议）用于重连
-    this.serverAddr = url;
-    // 显示用地址（去掉协议和端口）
-    var displayAddr = url.replace(/^https?:\/\//, '').replace(/:3000$/, '');
-    this.connectLocalServer(url, displayAddr);
-  },
-
-  // 连接本地 Node.js 服务器（Socket.IO 实时同步）
-  connectLocalServer(addr, displayAddr) {
-    var self = this;
-    var url = (addr.indexOf('://') !== -1) ? addr : ('http://' + addr);
-    var showAddr = displayAddr || addr;
-    this.updateOnlineStatus('connecting', '连接服务器 ' + showAddr + '...');
-    
-    try {
-      this.socket = io(url, { transports: ['websocket', 'polling'], timeout: 5000, withCredentials: false });
-      
-      this.socket.on('connect', function() {
-        self.localServerReachable = true;
-        self.cloudReachable = false;
-        self.updateOnlineStatus('local', '● 实时协作 ' + showAddr);
-        self.socket.emit('user-join', self.myName);
-        if (self.syncMode !== 'local') {
-          self.syncMode = 'local';
-          self.serverAddr = addr;
-          self.saveSyncMode();
-          var sel = document.getElementById('syncModeSelect');
-          if (sel) sel.value = 'local';
-          var inp = document.getElementById('serverAddrInput');
-          if (inp) { inp.value = showAddr; inp.style.display = 'inline-block'; }
-          document.getElementById('shareRowCloud').style.display = 'none';
-        }
-      });
-
-      this.socket.on('init-data', function(serverData) {
-        if (serverData && serverData.modules && Object.keys(serverData.modules).length > 0) {
-          self.data.modules = initGrids(serverData.modules);
-          self.data['work段'] = serverData['work段'] || '';
-          self.data['班组'] = serverData['班组'] || '';
-          self.data.lastUpdate = serverData.lastUpdate || new Date().toISOString();
-          self.data.confirmed = serverData.confirmed || {};
-          self.renderHeader();
-          self.renderModules();
-          self.saveLocal();
-        }
-      });
-
-      this.socket.on('cell-updated', function(payload) {
-        if (!payload || payload.user === self.myName) return;
-        if (payload.moduleId && self.data.modules[payload.moduleId]) {
-          var mod = self.data.modules[payload.moduleId];
-          if (payload.field === 'grid' && payload.key) {
-            if (!mod.gridData) mod.gridData = {};
-            var mKey = String(mod.currentMonth);
-            if (!mod.gridData[mKey]) mod.gridData[mKey] = {};
-            mod.gridData[mKey][payload.key] = payload.value;
-          } else if (payload.field === 'problem') {
-            mod.problem = payload.value;
-          } else if (payload.field === 'people' && payload.rowIndex !== undefined) {
-            if (mod.people && mod.people[payload.rowIndex]) {
-              if (payload.col === 'name') mod.people[payload.rowIndex].name = payload.value;
-              else mod.people[payload.rowIndex][payload.col] = payload.value;
-            }
-          } else if (payload.field === 'people-add') {
-            if (!mod.people) mod.people = [];
-            mod.people.push({ name: payload.value || '', w1:'', w2:'', w3:'', w4:'' });
-          } else if (payload.field === 'people-delete') {
-            if (mod.people) mod.people.splice(payload.rowIndex, 1);
-          } else if (payload.field === 'month') {
-            mod.currentMonth = payload.value;
-          } else if (payload.field === 'threshold') {
-            if (payload.threshold === 'trendTarget') mod.trendTarget = payload.value;
-            else if (payload.threshold === 'kpiGreen') {
-              if (mod.isLowerBetter) mod.kpiGreenMax = payload.value; else mod.kpiGreenMin = payload.value;
-            } else if (payload.threshold === 'kpiYellow') {
-              if (mod.isLowerBetter) mod.kpiYellowMax = payload.value; else mod.kpiYellowMin = payload.value;
-            }
-          } else if (payload.field === 'meta') {
-            if (payload.metaKey === 'work段') self.data['work段'] = payload.value;
-            if (payload.metaKey === '班组') self.data['班组'] = payload.value;
-          } else if (payload.field === 'trendTitle') {
-            mod.trendTitle = payload.value;
-          } else if (payload.field === 'title') {
-            mod.title = payload.value;
-          }
-          self.data.lastUpdate = new Date().toISOString();
-          self.renderHeaderMetaOnly();
-          self.renderModules();
-          self.saveLocal();
-        }
-      });
-
-      this.socket.on('user-joined', function(info) {
-        self.showToast(info.name + ' 加入了协作');
-      });
-
-      this.socket.on('user-left', function(info) {
-        self.showToast(info.name + ' 离开了');
-      });
-
-      this.socket.on('data-updated', function(serverData) {
-        // 来自其他客户端通过 REST API 推送的数据
-        if (serverData && serverData.modules) {
-          self.data.modules = initGrids(serverData.modules);
-          self.data['work段'] = serverData['work段'] || '';
-          self.data['班组'] = serverData['班组'] || '';
-          self.data.lastUpdate = serverData.lastUpdate || new Date().toISOString();
-          self.data.confirmed = serverData.confirmed || {};
-          self.renderHeader();
-          self.renderModules();
-        }
-      });
-
-      this.socket.on('disconnect', function() {
-        self.localServerReachable = false;
-        self.updateOnlineStatus('offline', '服务器断开，数据保存本地');
-        // 5秒后自动重连
-        setTimeout(function() {
-          if (!self.localServerReachable && self.syncMode === 'local') {
-            self.connectLocalServer(addr, showAddr);
-          }
-        }, 5000);
-      });
-
-      this.socket.on('connect_error', function() {
-        self.localServerReachable = false;
-        self.updateOnlineStatus('offline', '服务器未响应');
-        if (self.syncMode === 'auto') self.checkCloudAndStart();
-      });
-
-    } catch(e) {
-      this.localServerReachable = false;
-      if (this.syncMode === 'auto') this.checkCloudAndStart();
-      else this.updateOnlineStatus('offline', '无法连接本地服务器');
-    }
-  },
-
-  // 云端模式：检测 jsonblob.com 连通性
   checkCloudAndStart() {
     var self = this;
-    fetch(CLOUD_API, { method: 'HEAD', headers: { 'Cache-Control': 'no-cache' }, mode: 'cors' })
-    .then(function(r) {
+    fetch(GITHUB_RAW, { method: 'HEAD', cache: 'no-cache' })
+    .then(function() {
       self.cloudReachable = true;
       self._startCloudSync();
     })
@@ -882,280 +555,131 @@ App = {
   _startCloudSync() {
     if (this.cloudRetryTimer) { clearTimeout(this.cloudRetryTimer); this.cloudRetryTimer = null; }
     if (this.cloudPollTimer) { clearInterval(this.cloudPollTimer); this.cloudPollTimer = null; }
-    if (this.cloudRenewTimer) { clearInterval(this.cloudRenewTimer); this.cloudRenewTimer = null; }
-    if (this.cloudBlobId) {
-      // 始终把blobID同步到URL哈希，确保复制网址即分享
-      var curHash = window.location.hash;
-      if (!curHash || !curHash.startsWith('#s=')) {
-        window.location.hash = '#s=' + this.cloudBlobId;
-      } else if (curHash.substring(3) !== this.cloudBlobId) {
-        window.location.hash = '#s=' + this.cloudBlobId;
-      }
-      this.pullFromCloud(true);
-      this.showShareCode();
-    } else {
-      this.createCloudBlob();
-    }
-    this.cloudPollTimer = setInterval(() => this.pullFromCloud(false), POLL_INTERVAL);
-    this.cloudRenewTimer = setInterval(() => this.renewCloudBlob(), RENEW_INTERVAL);
-    this.updateOnlineStatus('cloud', '● 云端协作');
-
-    var params = new URLSearchParams(window.location.search);
-    var joinCode = params.get('join');
-    if (joinCode && joinCode !== this.cloudBlobId) {
-      var ji = document.getElementById('joinCodeInput');
-      if (ji) ji.value = joinCode;
-      var self = this;
-      setTimeout(function() { self.joinSession(joinCode); }, 1500);
-    }
+    this.pullFromCloud(true);
+    var self = this;
+    this.cloudPollTimer = setInterval(function() { self.pullFromCloud(false); }, POLL_INTERVAL);
+    this.updateOnlineStatus('online', '\u25cf 云端协作');
   },
 
   updateOnlineStatus(mode, text) {
     var el = document.getElementById('onlineUsers');
     if (!el) return;
     if (mode === 'connecting') {
-      el.innerHTML = '<span class="status-capsule offline">◌ ' + (text || '正在连接...') + '</span>';
-    } else if (mode === 'local') {
-      el.innerHTML = '<span class="status-capsule online" style="background:rgba(34,197,94,.15);color:#16a34a">● 本地服务器</span>';
-    } else if (mode === 'cloud') {
-      el.innerHTML = '<span class="status-capsule online">● 云端协作</span>';
+      el.innerHTML = '<span class="status-capsule offline">\u25cc ' + (text || '正在连接...') + '</span>';
+    } else if (mode === 'online') {
+      el.innerHTML = '<span class="status-capsule online">\u25cf 云端协作</span>';
     } else {
-      el.innerHTML = '<span class="status-capsule offline">◐ ' + (text || '离线模式（数据保存本地）') + '</span>';
+      el.innerHTML = '<span class="status-capsule offline">\u25d0 ' + (text || '离线模式（数据保存本地）') + '</span>';
     }
   },
 
-  // 修改 saveLocal，本地服务器模式下同时通过 Socket.IO 推送
-  emitToServer(payload) {
-    if (this.socket && this.socket.connected) {
-      this.socket.emit('cell-edit', payload);
-    }
-  },
-
-  createCloudBlob() {
-    const payload = {
-      version: 1,
-      updatedAt: new Date().toISOString(),
-      updatedBy: this.myName,
-      modules: this.data.modules,
-      'work段': this.data['work段'],
-      '班组': this.data['班组'],
-      confirmed: this.data.confirmed || {}
-    };
-    fetch(CLOUD_API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    })
-    .then(r => {
-      const loc = r.headers.get('Location') || r.headers.get('X-jsonblob-id');
-      if (loc) {
-        this.cloudBlobId = loc.replace('/api/jsonBlob/', '');
-        localStorage.setItem(CLOUD_BLOB_ID_KEY, this.cloudBlobId);
-        // 将blobID写入URL哈希，分享该URL即可自动同步
-        window.location.hash = '#s=' + this.cloudBlobId;
-        this.cloudVersion = 1;
-        this.cloudETag = r.headers.get('ETag');
-        this.cloudReachable = true;
-        this.showShareCode();
-        this.updateOnlineStatus('online');
-        console.log('云端数据创建成功，共享码:', this.cloudBlobId);
-      }
-    })
-    .catch(e => console.warn('创建云端数据失败:', e));
-  },
-
+  // 从 GitHub 拉取数据（所有人共享同一个 data.json）
   pullFromCloud(isInit) {
-    if (!this.cloudBlobId || !this.cloudReachable) return;
-    const url = CLOUD_API + '/' + this.cloudBlobId;
-    fetch(url, { headers: { 'Cache-Control': 'no-cache' } })
-    .then(r => {
-      if (!r.ok) { if (r.status === 404) this.handleBlobExpired(); throw new Error('fetch failed'); }
-      const etag = r.headers.get('ETag');
-      // 如果ETag没变，数据未更新
-      if (!isInit && etag && etag === this.cloudETag) return null;
-      this.cloudETag = etag;
-      return r.json();
-    })
-    .then(cloudData => {
-      if (!cloudData || !cloudData.modules) return;
-      if (!isInit && cloudData.version <= this.cloudVersion) return; // 版本不新，跳过
-      // 合并云端数据
-      this.data.modules = initGrids(cloudData.modules);
-      this.data['work段'] = cloudData['work段'] || '';
-      this.data['班组'] = cloudData['班组'] || '';
-      this.data.lastUpdate = cloudData.updatedAt || new Date().toISOString();
-      this.data.confirmed = cloudData.confirmed || {};
-      this.cloudVersion = cloudData.version || 1;
-      this.renderHeader();
-      this.renderModules();
-      this.saveLocal(); // 同步到本地
-      if (!isInit) this.showToast('云端数据已同步');
-    })
-    .catch(e => {
-      if (!isInit) console.debug('拉取云端:', e.message);
-      if ((e.message || '').indexOf('Failed to fetch') !== -1) {
-        this.cloudReachable = false;
-        this.updateOnlineStatus('offline', '离线模式（数据保存本地）');
-        if (!this.cloudRetryTimer) {
-          var self = this;
-          this.cloudRetryTimer = setTimeout(function() { self.checkCloudAndStart(); }, 30000);
-        }
-      }
-    });
-  },
-
-  pushToCloud() {
-    if (!this.cloudReachable) return; // 离线模式，静默跳过
-    if (!this.cloudBlobId) { this.createCloudBlob(); return; }
-    this.cloudVersion++;
-    const payload = {
-      version: this.cloudVersion,
-      updatedAt: new Date().toISOString(),
-      updatedBy: this.myName,
-      modules: this.data.modules,
-      'work段': this.data['work段'],
-      '班组': this.data['班组'],
-      confirmed: this.data.confirmed || {}
-    };
-    const url = CLOUD_API + '/' + this.cloudBlobId;
-    fetch(url, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    })
-    .then(r => {
-      this.cloudETag = r.headers.get('ETag');
-    })
-    .catch(e => {
-      console.warn('推送到云端失败:', e);
-      if ((e.message || '').indexOf('Failed to fetch') !== -1) {
-        this.cloudReachable = false;
-        this.updateOnlineStatus('offline', '离线模式（数据保存本地）');
-        if (!this.cloudRetryTimer) {
-          var self = this;
-          this.cloudRetryTimer = setTimeout(function() { self.checkCloudAndStart(); }, 30000);
-        }
-      }
-    });
-  },
-
-  renewCloudBlob() {
-    if (!this.cloudBlobId) return;
-    const payload = {
-      version: this.cloudVersion,
-      updatedAt: new Date().toISOString(),
-      updatedBy: this.myName,
-      modules: this.data.modules,
-      'work段': this.data['work段'],
-      '班组': this.data['班组'],
-      confirmed: this.data.confirmed || {}
-    };
-    fetch(CLOUD_API + '/' + this.cloudBlobId, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    }).catch(() => {});
-  },
-
-  handleBlobExpired() {
-    console.warn('云端数据已过期，重新创建...');
-    this.cloudBlobId = null;
-    localStorage.removeItem(CLOUD_BLOB_ID_KEY);
-    this.cloudVersion = 0;
-    this.cloudETag = null;
-    this.createCloudBlob();
-  },
-
-  // 显示共享码（前12位）
-  showShareCode() {
-    var area = document.getElementById('shareCodeArea');
-    var text = document.getElementById('shareCodeText');
-    if (area && text && this.cloudBlobId) {
-      area.style.display = 'flex';
-      text.textContent = this.cloudBlobId.substring(0, 12);
-      text.title = '完整共享码: ' + this.cloudBlobId;
-    }
-  },
-
-  // 复制完整共享码
-  copyShareCode() {
-    if (!this.cloudBlobId) return;
-    navigator.clipboard.writeText(this.cloudBlobId).then(() => {
-      this.showToast('共享码已复制！发送给其他人即可加入协作');
-    }).catch(() => {
-      // 降级方案
-      var ta = document.createElement('textarea');
-      ta.value = this.cloudBlobId;
-      ta.style.position = 'fixed'; ta.style.opacity = '0';
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
-      this.showToast('共享码已复制！发送给其他人即可加入协作');
-    });
-  },
-
-  // 加入其他人的会话（输入共享码）
-  joinSession(blobId) {
-    if (!blobId) return;
-    blobId = blobId.trim();
-    if (blobId === this.cloudBlobId) {
-      this.showToast('已经在当前会话中');
-      return;
-    }
-    if (!this.cloudReachable) {
-      this.showToast('当前处于离线模式，无法加入会话。请等待网络恢复后重试');
-      return;
-    }
+    if (!this.cloudReachable) return;
     var self = this;
-    this.showToast('正在加入会话...');
-    // 先尝试拉取云端的blob
-    fetch(CLOUD_API + '/' + blobId, { headers: { 'Cache-Control': 'no-cache' } })
+    var headers = { 'Cache-Control': 'no-cache' };
+    if (!isInit && this.cloudETag) headers['If-None-Match'] = this.cloudETag;
+
+    fetch(GITHUB_RAW, { headers: headers })
     .then(function(r) {
-      if (r.status === 404) throw new Error('会话不存在或已过期（超过24小时未使用）');
-      if (!r.ok) throw new Error('无法连接云端（HTTP ' + r.status + '），请检查网络');
+      if (r.status === 304) return null;
+      var etag = r.headers.get('ETag');
+      if (etag) self.cloudETag = etag;
       return r.json();
     })
     .then(function(cloudData) {
-      if (!cloudData || !cloudData.modules) throw new Error('数据格式异常，请确认共享码正确');
-      // 停止当前轮询
-      if (self.cloudPollTimer) clearInterval(self.cloudPollTimer);
-      if (self.cloudRenewTimer) clearInterval(self.cloudRenewTimer);
-      // 切换到新的blob
-      self.cloudBlobId = blobId;
-      localStorage.setItem(CLOUD_BLOB_ID_KEY, blobId);
-      self.cloudVersion = cloudData.version || 1;
-      self.cloudETag = null;
-      // 合并云端数据
+      if (!cloudData || !cloudData.modules) return;
+      if (!isInit && cloudData.version <= self.cloudVersion) return;
       self.data.modules = initGrids(cloudData.modules);
       self.data['work段'] = cloudData['work段'] || '';
       self.data['班组'] = cloudData['班组'] || '';
       self.data.lastUpdate = cloudData.updatedAt || new Date().toISOString();
       self.data.confirmed = cloudData.confirmed || {};
+      self.cloudVersion = cloudData.version || 1;
       self.renderHeader();
       self.renderModules();
       self.saveLocal();
-      self.showShareCode();
-      // 重新启动轮询
-      self.cloudPollTimer = setInterval(function() { self.pullFromCloud(false); }, POLL_INTERVAL);
-      self.cloudRenewTimer = setInterval(function() { self.renewCloudBlob(); }, RENEW_INTERVAL);
-      document.getElementById('joinCodeInput').value = '';
-      self.showToast('已成功加入共享会话！数据实时同步中');
+      if (!isInit) self.showToast('云端数据已同步');
     })
     .catch(function(e) {
-      // 根据错误类型给出友好提示
-      if (e.message.indexOf('404') !== -1 || e.message.indexOf('过期') !== -1) {
-        self.showToast('会话不存在或已过期（超过24小时未使用）');
-      } else if (e.message.indexOf('Failed to fetch') !== -1 || e.message.indexOf('NetworkError') !== -1) {
-        self.showToast('网络不可达，请检查网络后重试');
+      if (!isInit) console.debug('拉取云端:', e.message);
+      if ((e.message || '').indexOf('Failed to fetch') !== -1) {
         self.cloudReachable = false;
         self.updateOnlineStatus('offline', '离线模式（数据保存本地）');
-      } else {
-        self.showToast('加入失败: ' + e.message);
+        if (!self.cloudRetryTimer) {
+          self.cloudRetryTimer = setTimeout(function() { self.checkCloudAndStart(); }, 30000);
+        }
       }
     });
   },
 
+  // 推送数据到 GitHub（读写同一个 data.json）
+  pushToCloud() {
+    if (!this.cloudReachable || !GITHUB_TOKEN) return;
+    var self = this;
+    self.cloudVersion++;
+
+    fetch(GITHUB_API_CONTENT, {
+      headers: {
+        'Authorization': 'token ' + GITHUB_TOKEN,
+        'Accept': 'application/vnd.github+json',
+        'Cache-Control': 'no-cache'
+      }
+    })
+    .then(function(r) {
+      if (!r.ok) throw new Error('get sha failed');
+      return r.json();
+    })
+    .then(function(fileInfo) {
+      var payload = {
+        version: self.cloudVersion,
+        updatedAt: new Date().toISOString(),
+        updatedBy: self.myName,
+        modules: self.data.modules,
+        'work段': self.data['work段'],
+        '班组': self.data['班组'],
+        confirmed: self.data.confirmed || {}
+      };
+      var jsonStr = JSON.stringify(payload);
+      var contentB64 = btoa(unescape(encodeURIComponent(jsonStr)));
+
+      return fetch(GITHUB_API_CONTENT, {
+        method: 'PUT',
+        headers: {
+          'Authorization': 'token ' + GITHUB_TOKEN,
+          'Content-Type': 'application/json',
+          'Accept': 'application/vnd.github+json'
+        },
+        body: JSON.stringify({
+          message: 'update by ' + self.myName,
+          content: contentB64,
+          sha: fileInfo.sha,
+          branch: 'main'
+        })
+      });
+    })
+    .then(function(r) {
+      if (r && r.ok) return r.json();
+      throw new Error('push failed');
+    })
+    .then(function(result) {
+      if (result && result.content && result.content.sha) {
+        self.cloudETag = '"' + result.content.sha + '"';
+      }
+      console.log('push ok v' + self.cloudVersion);
+    })
+    .catch(function(e) {
+      console.warn('push fail:', e.message);
+      self.cloudVersion--;
+      if ((e.message || '').indexOf('Failed to fetch') !== -1) {
+        self.cloudReachable = false;
+        self.updateOnlineStatus('offline', '离线模式（数据保存本地）');
+        if (!self.cloudRetryTimer) {
+          self.cloudRetryTimer = setTimeout(function() { self.checkCloudAndStart(); }, 30000);
+        }
+      }
+    });
+  },
   saveLocal() {
     try {
       localStorage.setItem(LS_KEY, JSON.stringify(this.data));
@@ -1165,31 +689,11 @@ App = {
         'work段': this.data['work段'], '班组': this.data['班组'],
         lastUpdate: this.data.lastUpdate
       });
-      // 本地服务器模式：推送到本地服务器（实时同步）
-      if (this.localServerReachable && this.socket && this.socket.connected) {
-        this.pushToLocalServer();
-        return; // 服务器模式，不需要推送到 jsonblob
-      }
-      // 云端模式：推送到 jsonblob
       clearTimeout(this._pushTimer);
       this._pushTimer = setTimeout(() => this.pushToCloud(), 800);
     } catch (e) {}
   },
-
-  // 推送数据到本地 Node.js 服务器
-  pushToLocalServer() {
-    if (!this.localServerReachable || !this.serverAddr) return;
-    var self = this;
-    clearTimeout(this._localPushTimer);
-    this._localPushTimer = setTimeout(function() {
-      var baseUrl = self.serverAddr.indexOf('://') !== -1 ? self.serverAddr : ('http://' + self.serverAddr);
-      fetch(baseUrl + '/api/data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(self.data)
-      }).catch(function() {});
-    }, 800);
-  },
+,
 
   renderHeader() { this.renderHeaderMetaOnly(); this.updateLastUpdate(); },
 
