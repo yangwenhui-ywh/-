@@ -336,7 +336,7 @@ var ICONS = {
 };
 
 var WEEK_HEADERS = ['日','一','二','三','四','五','六'];
-var APP_VERSION = 'v7.2-cloud'; // 云端版 - jsonblob.com 公网同步
+var APP_VERSION = 'v7.3-cloud'; // 云端版 - jsonblob.com 公网同步（URL哈希共享）
 var LS_KEY = 'dianjian_dashboard_v6';
 var BC_CHANNEL = 'dianjian_v5_broadcast';
 var CLOUD_API = 'https://jsonblob.com/api/jsonBlob';
@@ -561,7 +561,14 @@ App = {
 
   initSync() {
     this.isConnected = true;
-    this.cloudBlobId = localStorage.getItem(CLOUD_BLOB_ID_KEY);
+    // URL哈希优先：同一个网址=同一份数据
+    var hash = window.location.hash;
+    if (hash.startsWith('#s=')) {
+      this.cloudBlobId = hash.substring(3);
+      localStorage.setItem(CLOUD_BLOB_ID_KEY, this.cloudBlobId);
+    } else {
+      this.cloudBlobId = localStorage.getItem(CLOUD_BLOB_ID_KEY);
+    }
     this.cloudVersion = 0;
     this.cloudETag = null;
     this.loadSyncMode();
@@ -937,6 +944,8 @@ App = {
       if (loc) {
         this.cloudBlobId = loc.replace('/api/jsonBlob/', '');
         localStorage.setItem(CLOUD_BLOB_ID_KEY, this.cloudBlobId);
+        // 将blobID写入URL哈希，分享该URL即可自动同步
+        window.location.hash = '#s=' + this.cloudBlobId;
         this.cloudVersion = 1;
         this.cloudETag = r.headers.get('ETag');
         this.cloudReachable = true;
