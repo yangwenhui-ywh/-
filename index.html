@@ -592,7 +592,7 @@ App = {
       self.data.confirmed = cloudData.confirmed || {};
       self.renderHeader();
       self.renderModules();
-      self.saveLocal();
+      self.saveLocal(true); // 云端读来的数据只存本地，不推回去
       self.updateOnlineStatus('online', '\\u25cf 云端协作');
       if (!isInit) self.showToast('云端数据已同步');
     })
@@ -671,7 +671,7 @@ App = {
       }
     });
   },
-  saveLocal() {
+  saveLocal(skipPush) {
     try {
       localStorage.setItem(LS_KEY, JSON.stringify(this.data));
       if (this.bc) this.bc.postMessage({
@@ -680,8 +680,10 @@ App = {
         'work段': this.data['work段'], '班组': this.data['班组'],
         lastUpdate: this.data.lastUpdate
       });
-      clearTimeout(this._pushTimer);
-      this._pushTimer = setTimeout(() => this.pushToCloud(), 800);
+      if (!skipPush) {
+        clearTimeout(this._pushTimer);
+        this._pushTimer = setTimeout(() => this.pushToCloud(), 800);
+      }
     } catch (e) {}
   },
 
