@@ -255,6 +255,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Micr
   <span class="debug-item">云端SHA: <code id="debugCloudSHA">---</code></span>
   <span class="debug-item">同步时间: <code id="debugSyncTime">---</code></span>
   <span class="debug-item">来源: <code id="debugSource">---</code></span>
+  <span class="debug-item" id="debugErrorItem" style="display:none">错误: <code id="debugError" style="color:#f87171">---</code></span>
   <button class="debug-toggle" id="debugToggle" title="收起">▲</button>
 </div>
 
@@ -625,8 +626,10 @@ App = {
       if (!isInit) self.showToast('云端数据已同步');
     })
     .catch(function(e) {
-      console.debug('拉取云端:', e.message);
-      if ((e.message || '').indexOf('Failed to fetch') !== -1 || isInit) {
+      var errMsg = e.message || '未知错误';
+      console.warn('拉取云端失败:', errMsg);
+      self.updateDebugBar(self.cloudReachable ? 'cloud' : 'offline', errMsg);
+      if (errMsg.indexOf('Failed to fetch') !== -1 || isInit) {
         self.cloudReachable = false;
         self.updateOnlineStatus('offline', '离线模式（数据保存本地）');
         if (isInit) { self.renderHeader(); self.renderModules(); }
@@ -736,15 +739,25 @@ App = {
   },
 
   // 更新诊断面板
-  updateDebugBar(source) {
+  updateDebugBar(source, errMsg) {
     var fpEl = document.getElementById('debugFingerprint');
     var shaEl = document.getElementById('debugCloudSHA');
     var timeEl = document.getElementById('debugSyncTime');
     var srcEl = document.getElementById('debugSource');
+    var errEl = document.getElementById('debugError');
+    var errItem = document.getElementById('debugErrorItem');
     if (fpEl) fpEl.textContent = this.computeFingerprint();
     if (shaEl) shaEl.textContent = this.cloudSHA ? this.cloudSHA.substring(0, 8) : '---';
     if (timeEl) timeEl.textContent = new Date().toLocaleTimeString('zh-CN');
-    if (srcEl) srcEl.textContent = source || 'local';
+    if (srcEl) srcEl.textContent = source || (this.cloudReachable ? '等待中' : '离线');
+    if (errEl && errItem) {
+      if (errMsg) {
+        errEl.textContent = errMsg;
+        errItem.style.display = '';
+      } else {
+        errItem.style.display = 'none';
+      }
+    }
   },
 
   renderHeader() { this.renderHeaderMetaOnly(); this.updateLastUpdate(); this.updateDebugBar(); },
