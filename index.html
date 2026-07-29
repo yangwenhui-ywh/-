@@ -204,6 +204,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Micr
 .status-capsule.online{background:rgba(34,197,94,.15);color:#16a34a}
 .status-capsule.offline{background:rgba(148,163,184,.15);color:#64748b}
 .status-capsule.local{background:rgba(245,158,11,.15);color:#d97706}
+/* 诊断面板 */
+.debug-bar{display:flex;align-items:center;gap:8px 18px;flex-wrap:wrap;padding:4px 16px;background:rgba(15,23,42,.7);border-bottom:1px solid rgba(99,102,241,.15);font-size:11px;color:#94a3b8}
+.debug-bar .debug-label{color:#818cf8;font-weight:700;margin-right:2px}
+.debug-bar .debug-item{display:inline-flex;align-items:center;gap:3px;white-space:nowrap}
+.debug-bar code{background:rgba(99,102,241,.12);color:#a5b4fc;padding:1px 6px;border-radius:3px;font-size:10px;font-family:'SF Mono','Cascadia Code',Consolas,monospace}
+.debug-bar .debug-toggle{background:none;border:none;color:#64748b;cursor:pointer;font-size:10px;padding:0 4px;margin-left:auto}
+.debug-bar.collapsed .debug-item{display:none}
+.debug-bar.collapsed .debug-toggle{transform:rotate(180deg)}
 
 /* Confirm toast */
 .confirm-toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#22c55e;color:#fff;padding:10px 24px;border-radius:8px;font-size:14px;font-weight:600;z-index:200;box-shadow:0 4px 16px rgba(34,197,94,.3);animation:slideUp .3s ease}
@@ -239,6 +247,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Micr
 <div class="online-users" id="onlineUsers"></div>
 <div class="last-update" id="lastUpdate"></div>
 </header>
+
+<!-- 诊断面板：对比两台设备数据是否一致 -->
+<div class="debug-bar" id="debugBar">
+  <span class="debug-label">🔍 数据诊断</span>
+  <span class="debug-item">数据指纹: <code id="debugFingerprint">---</code></span>
+  <span class="debug-item">云端SHA: <code id="debugCloudSHA">---</code></span>
+  <span class="debug-item">同步时间: <code id="debugSyncTime">---</code></span>
+  <span class="debug-item">来源: <code id="debugSource">---</code></span>
+  <button class="debug-toggle" id="debugToggle" title="收起">▲</button>
+</div>
 
 <nav class="category-tabs">
 <button class="cat-tab active" data-cat="all">全部指标</button>
@@ -306,6 +324,15 @@ document.addEventListener('DOMContentLoaded', function() {
     // 自动登录：优先使用上次保存的姓名，否则默认"管理员"
     App.myName = localStorage.getItem('dianjian_username') || '管理员';
     App.loadAndStart();
+    // 诊断面板折叠按钮
+    var debugToggle = document.getElementById('debugToggle');
+    if (debugToggle) {
+      debugToggle.addEventListener('click', function() {
+        var bar = document.getElementById('debugBar');
+        bar.classList.toggle('collapsed');
+        debugToggle.textContent = bar.classList.contains('collapsed') ? '▼' : '▲';
+      });
+    }
     if (statusEl && typeof Chart !== 'undefined') statusEl.textContent = '✅ 系统就绪';
   } catch(e) {
     if (statusEl) statusEl.textContent = '❌ 初始化失败: ' + e.message;
@@ -592,6 +619,7 @@ App = {
       self.data.confirmed = cloudData.confirmed || {};
       self.renderHeader();
       self.renderModules();
+      self.updateDebugBar('cloud'); // 标记数据来源为云端
       self.saveLocal(true); // 云端读来的数据只存本地，不推回去
       self.updateOnlineStatus('online', '\\u25cf 云端协作');
       if (!isInit) self.showToast('云端数据已同步');
@@ -687,7 +715,39 @@ App = {
     } catch (e) {}
   },
 
-  renderHeader() { this.renderHeaderMetaOnly(); this.updateLastUpdate(); },
+  // 计算数据指纹：对所有模块的关键值做哈希，两台设备指纹相同 = 数据一致
+  computeFingerprint() {
+    var parts = [];
+    parts.push(this.data['work段'] || '');
+    parts.push(this.data['班组'] || '');
+    var mods = this.data.modules || {};
+    var keys = Object.keys(mods).sort();
+    for (var i = 0; i < keys.length; i++) {
+      var m = mods[keys[i]];
+      parts.push(keys[i] + '|' + (m.currentMonth||'') + '|' + (m.currentDay||'') + '|' + (m.confirmedAt||''));
+    }
+    var str = parts.join('::');
+    // 简单哈希（djb2）
+    var hash = 5381;
+    for (var j = 0; j < str.length; j++) {
+      hash = ((hash << 5) + hash + str.charCodeAt(j)) & 0xffffffff;
+    }
+    return (hash >>> 0).toString(16).padStart(8, '0').toUpperCase();
+  },
+
+  // 更新诊断面板
+  updateDebugBar(source) {
+    var fpEl = document.getElementById('debugFingerprint');
+    var shaEl = document.getElementById('debugCloudSHA');
+    var timeEl = document.getElementById('debugSyncTime');
+    var srcEl = document.getElementById('debugSource');
+    if (fpEl) fpEl.textContent = this.computeFingerprint();
+    if (shaEl) shaEl.textContent = this.cloudSHA ? this.cloudSHA.substring(0, 8) : '---';
+    if (timeEl) timeEl.textContent = new Date().toLocaleTimeString('zh-CN');
+    if (srcEl) srcEl.textContent = source || 'local';
+  },
+
+  renderHeader() { this.renderHeaderMetaOnly(); this.updateLastUpdate(); this.updateDebugBar(); },
 
   renderHeaderMetaOnly() {
     const wd = document.getElementById('workDuan'), bz = document.getElementById('banZu');
