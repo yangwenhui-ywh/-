@@ -330,7 +330,7 @@ var APP_VERSION = 'v7.5-github'; // GitHub API 同步版，无需第三方服务
 var LS_KEY = 'dianjian_dashboard_v6';
 var BC_CHANNEL = 'dianjian_v5_broadcast';
 var GITHUB_TOKEN = String.fromCharCode(103,104,112,95,67,105,117,85,86,106,111,55,120,82,66,67,114,56,104,72,103,118,70,72,67,98,48,109,86,114,81,53,76,77,48,88,102,90,119,65);
-var GITHUB_RAW = 'https://raw.githubusercontent.com/yangwenhui-ywh/-/main/data.json';
+var GITHUB_RAW = './data.json'; // 同源读取，避免 raw.githubusercontent.com 被墙导致不同步
 var GITHUB_API_CONTENT = 'https://api.github.com/repos/yangwenhui-ywh/-/contents/data.json';
 var POLL_INTERVAL = 3000; // 云端轮询间隔(毫秒)
 
