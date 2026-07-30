@@ -53,10 +53,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Micr
 .meta-save-hint{font-size:11px;color:#22c55e;opacity:0;transition:opacity .3s;margin-left:4px;white-space:nowrap}.meta-save-hint.show{opacity:1}
 .header-meta label{display:flex;align-items:center;gap:6px}
 .header-right{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
-.header-right-wrap{display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:flex-end}
-.logo-container{display:flex;align-items:center;gap:6px;margin-left:12px;flex-shrink:0}
-.logo-container svg{height:36px;width:auto}
-@media(max-width:768px){.logo-container svg{height:28px}}
 .version-badge{font-size:11px;color:#fde68a;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);padding:2px 10px;border-radius:12px;font-weight:600;letter-spacing:.5px}
 .share-row{display:flex;gap:8px;align-items:center;font-size:12px}
 .share-code{display:flex;align-items:center;gap:4px;background:rgba(255,255,255,.12);border-radius:6px;padding:2px 8px;white-space:nowrap}
@@ -260,7 +256,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Micr
 <label>班组：<input type="text" id="banZu" class="meta-input" placeholder="请输入"><button class="meta-save-btn" data-target="banZu" title="保存修改">保存</button><span class="meta-save-hint" id="banZuHint">✓ 已保存</span></label>
 </div>
 </div>
-<div class="header-right-wrap">
 <div class="header-right">
 <div class="sync-mode-row" id="syncModeRow">
   <select class="sync-mode-select" id="syncModeSelect">
@@ -276,29 +271,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Micr
 </div>
 <div class="version-badge" id="versionBadge">v7.8-gitee</div>
 <div class="online-users" id="onlineUsers"></div>
-<div class="last-update" id="lastUpdate"></div>
-<div class="logo-container">
-<svg viewBox="0 0 260 50" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="logoGold" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#fbbf24"/>
-      <stop offset="50%" stop-color="#f59e0b"/>
-      <stop offset="100%" stop-color="#d97706"/>
-    </linearGradient>
-  </defs>
-  <!-- 皇冠图标 -->
-  <g transform="translate(2,3) scale(0.9)">
-    <polygon points="12,38 38,38 40,22 34,32 25,14 16,32 10,22" fill="url(#logoGold)" stroke="#b45309" stroke-width="1"/>
-    <rect x="10" y="38" width="30" height="6" rx="2" fill="#d97706"/>
-    <circle cx="25" cy="22" r="3" fill="#fbbf24" stroke="#b45309" stroke-width="0.5"/>
-  </g>
-  <!-- 文字 -->
-  <text x="55" y="24" font-family="'PingFang SC','Microsoft YaHei','SimHei',sans-serif" font-size="16" font-weight="700" fill="url(#logoGold)" letter-spacing="2">金冠电气</text>
-  <text x="55" y="40" font-family="Arial,sans-serif" font-size="8" fill="rgba(255,255,255,0.6)" letter-spacing="1">JINGUAN ELECTRIC</text>
-</svg>
-</div>
-</div>
-</header>
+<div class="last-update" id="lastUpdate"></div></header>
 
 <!-- 诊断面板：对比两台设备数据是否一致 -->
 <div class="debug-bar" id="debugBar">
