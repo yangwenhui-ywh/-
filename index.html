@@ -53,6 +53,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Micr
 .meta-save-hint{font-size:11px;color:#22c55e;opacity:0;transition:opacity .3s;margin-left:4px;white-space:nowrap}.meta-save-hint.show{opacity:1}
 .header-meta label{display:flex;align-items:center;gap:6px}
 .header-right{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.header-right-wrap{display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:flex-end}
+.logo-container{display:flex;align-items:center;gap:6px;margin-left:12px;flex-shrink:0}
+.logo-container svg{height:36px;width:auto}
+@media(max-width:768px){.logo-container svg{height:28px}}
 .version-badge{font-size:11px;color:#fde68a;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);padding:2px 10px;border-radius:12px;font-weight:600;letter-spacing:.5px}
 .share-row{display:flex;gap:8px;align-items:center;font-size:12px}
 .share-code{display:flex;align-items:center;gap:4px;background:rgba(255,255,255,.12);border-radius:6px;padding:2px 8px;white-space:nowrap}
@@ -163,6 +167,23 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Micr
 .btn-add-row{padding:4px 12px;border:1px dashed #2563eb;border-radius:6px;background:#fff;color:#2563eb;font-size:12px;cursor:pointer;font-weight:500;transition:all .15s}
 .btn-add-row:hover{background:var(--blue-50);border-style:solid}
 
+/* Multiskill table */
+.skill-cell{position:relative;display:flex;align-items:center;justify-content:center;gap:4px;padding:4px 6px}
+.skill-select{width:100%;max-width:70px;padding:3px 2px;border:1px solid var(--c-border);border-radius:4px;font-size:11px;text-align:center;background:#fff;cursor:pointer;appearance:none;-webkit-appearance:none;color:var(--c-text);transition:border-color .15s}
+.skill-select:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 2px rgba(59,130,246,.15)}
+.skill-circle{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.skill-circle svg{width:20px;height:20px}
+.multiskill-summary{padding:8px 16px 4px}
+.multiskill-summary table{width:100%;border-collapse:collapse;font-size:11px}
+.multiskill-summary th{background:var(--gold-50);padding:5px 4px;text-align:center;font-weight:600;color:var(--gold-600);border-bottom:2px solid var(--gold-300)}
+.multiskill-summary td{padding:4px;text-align:center;border-bottom:1px solid var(--c-border)}
+.summary-val{font-weight:700;font-size:13px}
+.summary-val.green{color:#22c55e}
+.summary-val.yellow{color:#f59e0b}
+.summary-val.red{color:#ef4444}
+.skill-name-input{border:1px solid var(--c-border);border-radius:4px;font-size:12px;padding:4px 6px;background:#fff;font-weight:500;width:80px;transition:border-color .15s;text-align:center}
+.skill-name-input:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 2px rgba(59,130,246,.15)}
+
 /* Trend */
 .trend-section{padding:8px 16px 12px}
 .trend-title{font-size:12px;font-weight:600;color:var(--c-text-light);margin-bottom:4px;border:none;background:transparent;padding:2px 4px;border-radius:4px;width:100%;transition:background .15s,border-color .15s}.trend-title:hover{background:#f0f4ff}.trend-title:focus{outline:none;border-color:var(--blue-500);background:#fff;box-shadow:0 0 0 2px rgba(29,78,216,.15)}
@@ -239,6 +260,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Micr
 <label>班组：<input type="text" id="banZu" class="meta-input" placeholder="请输入"><button class="meta-save-btn" data-target="banZu" title="保存修改">保存</button><span class="meta-save-hint" id="banZuHint">✓ 已保存</span></label>
 </div>
 </div>
+<div class="header-right-wrap">
 <div class="header-right">
 <div class="sync-mode-row" id="syncModeRow">
   <select class="sync-mode-select" id="syncModeSelect">
@@ -255,6 +277,27 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Micr
 <div class="version-badge" id="versionBadge">v7.8-gitee</div>
 <div class="online-users" id="onlineUsers"></div>
 <div class="last-update" id="lastUpdate"></div>
+<div class="logo-container">
+<svg viewBox="0 0 260 50" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="logoGold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fbbf24"/>
+      <stop offset="50%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#d97706"/>
+    </linearGradient>
+  </defs>
+  <!-- 皇冠图标 -->
+  <g transform="translate(2,3) scale(0.9)">
+    <polygon points="12,38 38,38 40,22 34,32 25,14 16,32 10,22" fill="url(#logoGold)" stroke="#b45309" stroke-width="1"/>
+    <rect x="10" y="38" width="30" height="6" rx="2" fill="#d97706"/>
+    <circle cx="25" cy="22" r="3" fill="#fbbf24" stroke="#b45309" stroke-width="0.5"/>
+  </g>
+  <!-- 文字 -->
+  <text x="55" y="24" font-family="'PingFang SC','Microsoft YaHei','SimHei',sans-serif" font-size="16" font-weight="700" fill="url(#logoGold)" letter-spacing="2">金冠电气</text>
+  <text x="55" y="40" font-family="Arial,sans-serif" font-size="8" fill="rgba(255,255,255,0.6)" letter-spacing="1">JINGUAN ELECTRIC</text>
+</svg>
+</div>
+</div>
 </header>
 
 <!-- 诊断面板：对比两台设备数据是否一致 -->
@@ -423,9 +466,15 @@ function initGrids(data) {
     }
     // 归一化 people 数组（确保字段齐全）
     if (mod.people && Array.isArray(mod.people)) {
-      mod.people = mod.people.map(function(p) {
-        return { name: p.name || '', w1: p.w1 || '', w2: p.w2 || '', w3: p.w3 || '', w4: p.w4 || '' };
-      });
+      if (mod.multiskill) {
+        mod.people = mod.people.map(function(p) {
+          return { name: p.name || '', fangbo: p.fangbo || '', fenjian: p.fenjian || '', choujian: p.choujian || '', baozhuang: p.baozhuang || '' };
+        });
+      } else {
+        mod.people = mod.people.map(function(p) {
+          return { name: p.name || '', w1: p.w1 || '', w2: p.w2 || '', w3: p.w3 || '', w4: p.w4 || '' };
+        });
+      }
     }
   }
   return data;
@@ -443,7 +492,7 @@ var INITIAL_DATA = {
     cost_output:        makeModule('成本---人均产出',         '成本','coins',       0.5, '件',   '人均产出趋势图(每天)',    false, false, {kpiGreenMin:0.5, kpiYellowMin:0.4}),
     cost_energy:        makeModule('成本---单位批次能耗',     '成本','zap',         80,  'kWh',  '单位批次能耗趋势图(每天)', false, true,  {kpiGreenMax:80,  kpiYellowMax:96}),
     improve_proposal:   makeModule('改革---提案改善',         '改革','lightbulb',   8,   '件',   '提案改善趋势图(每周)',    false, false, {kpiGreenMin:8,   kpiYellowMin:6}),
-    improve_multiskill: makeModule('改革---多能工比例',       '改革','users',       0.6, '%',    '多能工比例趋势图(每月)',  true,  false, {kpiGreenMin:0.6, kpiYellowMin:0.45})
+    improve_multiskill: makeModule('改革---多能工比例',       '改革','users',       0.6, '%',    '多能工比例趋势图(每月)',  true,  false, {kpiGreenMin:0.6, kpiYellowMin:0.45, multiskill: true})
   }
 };
 
@@ -455,6 +504,15 @@ INITIAL_DATA.modules.improve_proposal.people = [
   {name:'赵冰',w1:'',w2:'',w3:'',w4:''},{name:'任强',w1:'',w2:'',w3:'',w4:''},
   {name:'杨杭',w1:'',w2:'',w3:'',w4:''},{name:'杨尘',w1:'',w2:'',w3:'',w4:''},
   {name:'宋金城',w1:'',w2:'',w3:'',w4:''},{name:'王金东',w1:'',w2:'',w3:'',w4:''}
+];
+
+// 多能工初始数据 (multiskill: fangbo=方波筛选, fenjian=分拣, choujian=抽检, baozhuang=包装)
+INITIAL_DATA.modules.improve_multiskill.people = [
+  {name:'张照卿',fangbo:'',fenjian:'',choujian:'',baozhuang:''},
+  {name:'白扬',fangbo:'',fenjian:'',choujian:'',baozhuang:''},
+  {name:'李化传',fangbo:'',fenjian:'',choujian:'',baozhuang:''},
+  {name:'赵玉建',fangbo:'',fenjian:'',choujian:'',baozhuang:''},
+  {name:'关键江',fangbo:'',fenjian:'',choujian:'',baozhuang:''}
 ];
 
 function getGrid(mod) {
@@ -1074,7 +1132,7 @@ App = {
     }
 
     // People table — 有 people 数据的模块以表格为主展示区
-    if (mod.people && mod.people.length >= 0) {
+    if (mod.people && mod.people.length >= 0 && !mod.multiskill) {
       const ps = document.createElement('div'); ps.className = 'people-section';
       const pst = document.createElement('div'); pst.className = 'people-section-title';
       pst.innerHTML = '<span>人员提案统计表</span><span class="people-section-hint">（纵向：人员姓名，横向：第1~4周提案数量）</span>';
@@ -1091,6 +1149,28 @@ App = {
       pa.appendChild(addBtn);
       ps.appendChild(pa);
       card.appendChild(ps);
+    }
+
+    // Multiskill table — 多能工比例的专用表格
+    if (mod.people && mod.multiskill) {
+      const ps = document.createElement('div'); ps.className = 'people-section';
+      const pst = document.createElement('div'); pst.className = 'people-section-title';
+      pst.innerHTML = '<span>多能工技能矩阵</span><span class="people-section-hint">（0=不会, 0.25~1=技能等级，点击下拉选择）</span>';
+      ps.appendChild(pst);
+      ps.appendChild(this.createMultiskillTable(id, mod));
+      const pa = document.createElement('div'); pa.className = 'people-actions';
+      const addBtn = document.createElement('button');
+      addBtn.className = 'btn-add-row'; addBtn.textContent = '＋ 添加人员';
+      addBtn.addEventListener('click', () => {
+        mod.people.push({ name: '', fangbo:'', fenjian:'', choujian:'', baozhuang:'' });
+        this.emitEdit(id, 'people-add', null, '', { rowIndex: mod.people.length - 1 });
+        this.renderModules();
+      });
+      pa.appendChild(addBtn);
+      ps.appendChild(pa);
+      card.appendChild(ps);
+      // 汇总：各工序达标人数及比例
+      card.appendChild(this.createMultiskillSummary(id, mod));
     }
 
     // Trend chart
@@ -1358,6 +1438,141 @@ App = {
     t.appendChild(b); w.appendChild(t); return w;
   },
 
+  // 多能工技能矩阵表格 — 下拉选择 0/0.25/0.5/0.75/1，配合可视化圆圈
+  createMultiskillTable(mid, mod) {
+    var self = this;
+    var levels = ['0','0.25','0.5','0.75','1'];
+    var headers = ['方波筛选', '分拣', '抽检', '包装'];
+    var fields = ['fangbo', 'fenjian', 'choujian', 'baozhuang'];
+    var w = document.createElement('div'); w.style.overflowX = 'auto';
+    var t = document.createElement('table'); t.className = 'people-table';
+    var thead = '<thead><tr><th>姓名</th>';
+    headers.forEach(function(h) { thead += '<th>' + h + '</th>'; });
+    thead += '<th></th></tr></thead>';
+    t.innerHTML = thead;
+    var b = document.createElement('tbody');
+    mod.people.forEach(function(p, i) {
+      var r = document.createElement('tr');
+      // Editable name cell
+      var nTd = document.createElement('td');
+      var nInp = document.createElement('input');
+      nInp.className = 'skill-name-input'; nInp.type = 'text'; nInp.value = p.name || '';
+      nInp.placeholder = '姓名';
+      nInp.addEventListener('input', function() {
+        self.data.modules[mid].people[i].name = nInp.value;
+        self.emitEdit(mid, 'people', null, nInp.value, { rowIndex: i, col: 'name' });
+      });
+      nTd.appendChild(nInp); r.appendChild(nTd);
+
+      // Skill cells with dropdown + circle
+      fields.forEach(function(f) {
+        var td = document.createElement('td');
+        var cell = document.createElement('div');
+        cell.className = 'skill-cell';
+
+        // SVG circle visualization
+        var circ = document.createElement('span');
+        circ.className = 'skill-circle';
+        var val = parseFloat(p[f]) || 0;
+        circ.innerHTML = self.makeSkillCircle(val);
+        cell.appendChild(circ);
+
+        // Dropdown select
+        var sel = document.createElement('select');
+        sel.className = 'skill-select';
+        levels.forEach(function(lv) {
+          var opt = document.createElement('option');
+          opt.value = lv; opt.textContent = lv;
+          if (String(p[f]) === lv) opt.selected = true;
+          sel.appendChild(opt);
+        });
+        sel.addEventListener('change', function() {
+          self.data.modules[mid].people[i][f] = sel.value;
+          circ.innerHTML = self.makeSkillCircle(parseFloat(sel.value));
+          self.emitEdit(mid, 'people', null, sel.value, { rowIndex: i, col: f });
+          // 刷新汇总
+          var oldSum = document.getElementById('ms-summary-' + mid);
+          if (oldSum) {
+            var parent = oldSum.parentNode;
+            var newSum = self.createMultiskillSummary(mid, mod);
+            parent.replaceChild(newSum, oldSum);
+          }
+          self.renderAllCharts();
+        });
+        cell.appendChild(sel);
+        td.appendChild(cell); r.appendChild(td);
+      });
+
+      // Delete button
+      var delTd = document.createElement('td');
+      var delBtn = document.createElement('button');
+      delBtn.className = 'btn-del-row'; delBtn.innerHTML = '✕'; delBtn.title = '删除此行';
+      delBtn.addEventListener('click', function() {
+        self.data.modules[mid].people.splice(i, 1);
+        self.emitEdit(mid, 'people-delete', null, '', { rowIndex: i });
+        self.renderModules();
+      });
+      delTd.appendChild(delBtn); r.appendChild(delTd);
+      b.appendChild(r);
+    });
+    t.appendChild(b); w.appendChild(t); return w;
+  },
+
+  // SVG 圆圈：0=空, 0.25=1/4, 0.5=半圆, 0.75=3/4, 1=满圆
+  makeSkillCircle(val) {
+    val = parseFloat(val) || 0;
+    if (val <= 0) {
+      return '<svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="none" stroke="#cbd5e1" stroke-width="2"/></svg>';
+    }
+    if (val >= 1) {
+      return '<svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="#22c55e" stroke="#16a34a" stroke-width="1.5"/></svg>';
+    }
+    // 部分填充用 pie 切片 — 用 conic gradient 近似（SVG path 弧形）
+    var angle = val * 360;
+    var rad = (angle - 90) * Math.PI / 180;
+    var x = 10 + 8 * Math.cos(rad);
+    var y = 10 + 8 * Math.sin(rad);
+    var largeArc = angle > 180 ? 1 : 0;
+    var path = 'M 10 10 L 10 2 A 8 8 0 ' + largeArc + ' 1 ' + x + ' ' + y + ' Z';
+    return '<svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="none" stroke="#cbd5e1" stroke-width="2"/><path d="' + path + '" fill="#f59e0b" opacity="0.8"/></svg>';
+  },
+
+  // 多能工汇总：各工序达标(值为1)人数及占比
+  createMultiskillSummary(mid, mod) {
+    var self = this;
+    var skills = [
+      { label: '方波筛选', field: 'fangbo' },
+      { label: '分拣', field: 'fenjian' },
+      { label: '抽检', field: 'choujian' },
+      { label: '包装', field: 'baozhuang' }
+    ];
+    var total = mod.people.length;
+    var div = document.createElement('div');
+    div.className = 'multiskill-summary';
+    div.id = 'ms-summary-' + mid;
+
+    var tbl = document.createElement('table');
+    tbl.innerHTML = '<thead><tr><th>工序</th><th>达标人数（技能=1）</th><th>占总人数比例</th></tr></thead>';
+    var tb = document.createElement('tbody');
+    skills.forEach(function(sk) {
+      var count = 0;
+      mod.people.forEach(function(p) {
+        if (parseFloat(p[sk.field]) >= 1) count++;
+      });
+      var ratio = total > 0 ? (count / total * 100).toFixed(1) : '0.0';
+      var colorClass = ratio >= 60 ? 'green' : (ratio >= 30 ? 'yellow' : 'red');
+
+      var tr = document.createElement('tr');
+      tr.innerHTML = '<td><strong>' + sk.label + '</strong></td>' +
+        '<td><span class="summary-val ' + colorClass + '">' + count + ' 人</span></td>' +
+        '<td><span class="summary-val ' + colorClass + '">' + ratio + '%</span></td>';
+      tb.appendChild(tr);
+    });
+    tbl.appendChild(tb);
+    div.appendChild(tbl);
+    return div;
+  },
+
   renderAllCharts() {
     if (!this.data || !this.data.modules) return;
     if (typeof Chart === 'undefined') {
@@ -1378,6 +1593,53 @@ App = {
     if (!cv) return;
     if (this.charts[id]) this.charts[id].destroy();
     const max = mod.isMonthly ? 12 : 31;
+
+    // 多能工模块：柱状图显示各工序达标人数 + 比例目标线
+    if (mod.people && mod.people.length > 0 && mod.multiskill) {
+      var skills = [
+        { label: '方波筛选', field: 'fangbo' },
+        { label: '分拣', field: 'fenjian' },
+        { label: '抽检', field: 'choujian' },
+        { label: '包装', field: 'baozhuang' }
+      ];
+      var skLabels = [], skValues = [], skRatios = [];
+      var total = mod.people.length;
+      skills.forEach(function(sk) {
+        skLabels.push(sk.label);
+        var count = 0;
+        mod.people.forEach(function(p) {
+          if (parseFloat(p[sk.field]) >= 1) count++;
+        });
+        skValues.push(count);
+        skRatios.push(total > 0 ? (count / total * 100) : 0);
+      });
+      var targetRatio = (mod.trendTarget || 0.6) * 100;
+      var targetLine = new Array(4).fill(targetRatio);
+      var barColors = skRatios.map(function(r) {
+        return r >= 60 ? '#22c55e' : (r >= 30 ? '#f59e0b' : '#ef4444');
+      });
+      this.charts[id] = new Chart(cv.getContext('2d'), {
+        type: 'bar',
+        data: { labels: skLabels, datasets: [
+          { label: '目标比例(' + targetRatio.toFixed(0) + '%)', data: targetLine, borderColor: '#f59e0b', borderDash: [6,4], borderWidth: 2, backgroundColor: 'transparent', type: 'line', fill: false, pointRadius: 4, pointBackgroundColor: '#f59e0b' },
+          { label: '达标人数', data: skValues, backgroundColor: barColors, borderColor: barColors.map(function(c){return c;}), borderWidth: 1, borderRadius: 4 }
+        ]},
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: true, position: 'top', labels: { boxWidth: 12, font: { size: 10 }, usePointStyle: true } },
+            tooltip: { callbacks: { label: function(it) {
+              if (it.dataset.label.indexOf('%') > -1) return it.dataset.label + ': ' + it.raw + '%';
+              return it.dataset.label + ': ' + it.raw + ' 人 / ' + total + ' 人 (' + skRatios[it.dataIndex].toFixed(1) + '%)';
+            } } }
+          },
+          scales: {
+            x: { ticks: { font: { size: 10 } }, grid: { display: false } },
+            y: { ticks: { font: { size: 9 } }, grid: { color: '#e2e8f0' }, beginAtZero: true, title: { display: true, text: '人数' } }
+          }
+        }
+      });
+      return;
+    }
 
     // 有 people 数据的模块：柱状图，按周汇总
     if (mod.people && mod.people.length > 0) {
@@ -1496,7 +1758,11 @@ App = {
       }
     } else if (payload.field === 'people-add') {
       if (!mod.people) mod.people = [];
-      mod.people.push({ name: '', w1:'', w2:'', w3:'', w4:'' });
+      if (mod.multiskill) {
+        mod.people.push({ name: '', fangbo:'', fenjian:'', choujian:'', baozhuang:'' });
+      } else {
+        mod.people.push({ name: '', w1:'', w2:'', w3:'', w4:'' });
+      }
       this.renderModules();
     } else if (payload.field === 'people-delete') {
       if (mod.people) mod.people.splice(payload.rowIndex, 1);
@@ -1581,7 +1847,34 @@ App = {
       rows.push([]);
 
       // --- 人员表格模式 ---
-      if (mod.people && mod.people.length > 0) {
+      if (mod.people && mod.people.length > 0 && mod.multiskill) {
+        // 多能工技能矩阵
+        rows.push(['=== 多能工技能矩阵 ===']);
+        rows.push(['姓名', '方波筛选', '分拣', '抽检', '包装']);
+        mod.people.forEach(function(p) {
+          rows.push([p.name || '(未命名)',
+            p.fangbo || '0', p.fenjian || '0', p.choujian || '0', p.baozhuang || '0']);
+        });
+        rows.push([]);
+        rows.push(['=== 各工序达标人数汇总 ===']);
+        rows.push(['工序', '达标人数（技能=1）', '总人数', '占比']);
+        var total = mod.people.length;
+        var skills = [
+          { label: '方波筛选', field: 'fangbo' },
+          { label: '分拣', field: 'fenjian' },
+          { label: '抽检', field: 'choujian' },
+          { label: '包装', field: 'baozhuang' }
+        ];
+        skills.forEach(function(sk) {
+          var count = 0;
+          mod.people.forEach(function(p) {
+            if (parseFloat(p[sk.field]) >= 1) count++;
+          });
+          rows.push([sk.label, count, total, total > 0 ? (count/total*100).toFixed(1) + '%' : '0%']);
+        });
+        rows.push([]);
+        rows.push(['目标技能比例', mod.trendTarget !== undefined ? (mod.trendTarget*100).toFixed(0) + '%' : '60%']);
+      } else if (mod.people && mod.people.length > 0) {
         rows.push(['=== 人员提案明细 ===']);
         rows.push(['姓名', '第一周', '第二周', '第三周', '第四周', '个人合计']);
         var weekTotals = [0, 0, 0, 0];
