@@ -243,6 +243,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Micr
     <option value="cloud" selected>云端(GitHub)</option>
   </select>
   <input type="text" class="server-input" id="serverAddrInput" placeholder="服务器地址: 192.168.x.x:3000" style="display:none">
+  <input type="text" class="server-input" id="proxyUrlInput" placeholder="代理地址: https://xxx.vercel.app/api/write" style="width:280px;display:none">
+  <button class="meta-save-btn" id="proxySaveBtn" style="display:none" title="保存代理地址">保存</button>
 </div>
 <div class="share-row" id="shareRowCloud" style="display:flex">
   <span style="color:rgba(255,255,255,.7);font-size:13px">所有人打开同一网址即可协作</span>
@@ -499,6 +501,42 @@ App = {
           if (this.syncMode === 'local' && this.serverAddr) this.restartSync();
         }
       }.bind(this));
+    }
+    // 代理 URL 输入框
+    var proxyInput = document.getElementById('proxyUrlInput');
+    var proxyBtn = document.getElementById('proxySaveBtn');
+    if (proxyInput && proxyBtn) {
+      // 显示代理输入框
+      proxyInput.style.display = '';
+      proxyBtn.style.display = '';
+      // 加载已保存的代理地址
+      var savedProxy = localStorage.getItem('writeProxyUrl');
+      if (savedProxy) proxyInput.value = savedProxy;
+      // 保存按钮
+      proxyBtn.addEventListener('click', function() {
+        var url = proxyInput.value.trim();
+        if (url) {
+          localStorage.setItem('writeProxyUrl', url);
+          self._writeProxyUrl = url;
+          self._proxyAvailable = true;
+          proxyBtn.textContent = '✓ 已保存';
+          proxyBtn.style.background = '#22c55e';
+          setTimeout(function() { proxyBtn.textContent = '保存'; proxyBtn.style.background = ''; }, 2000);
+          console.log('代理地址已保存: ' + url);
+          // 立即测试连接
+          self._detectProxy(function(available) {
+            if (available) {
+              self.showToast('代理已连接，数据同步已就绪');
+            } else {
+              self.showToast('代理地址已保存，但连接测试失败');
+            }
+          });
+        }
+      }.bind(this));
+      // Enter 键保存
+      proxyInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') { proxyBtn.click(); }
+      });
     }
     // 页面关闭/刷新前立即推送数据，防止丢失
     var self = this;
