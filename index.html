@@ -362,15 +362,15 @@ var ICONS = {
 };
 
 var WEEK_HEADERS = ['日','一','二','三','四','五','六'];
-var APP_VERSION = 'v7.5-github'; // GitHub API 同步版，无需第三方服务
-var LS_KEY = 'dianjian_dashboard_v6';
-var BC_CHANNEL = 'dianjian_v5_broadcast';
+var APP_VERSION = 'v7.8-gitee';
+var LS_KEY = 'dianjian_dashboard_v7_github';
+var BC_CHANNEL = 'dianjian_bc_v7';
 // === Gitee API 配置（国内可访问，替代 GitHub API） ===
 var GITEE_TOKEN = String.fromCharCode(100,99,100,98,100,97,54,55,55,54,53,53,98,49,101,51,100,97,53,101,101,100,53,51,97,101,48,97,51,54,100,99);
 var GITEE_REPO = 'yang-wenhui222/kanban-data';
 var GITEE_API_CONTENT = 'https://gitee.com/api/v5/repos/' + GITEE_REPO + '/contents/data.json';
-var DATA_JSON_URL = './data.json'; // 保留兼容
-var POLL_INTERVAL = 3000; // 云端轮询间隔(毫秒)
+var CLOUD_POLL_INTERVAL = 3000;
+var CLOUD_PUSH_DEBOUNCE = 800;
 
 // 保留 GitHub Token 用于推送 index.html（仅开发用途）
 var GITHUB_TOKEN = String.fromCharCode(103,104,112,95,67,105,117,85,86,106,111,55,120,82,66,67,114,56,104,72,103,118,70,72,67,98,48,109,86,114,81,53,76,77,48,88,102,90,119,65);
@@ -382,10 +382,10 @@ var MONTH_OPTIONS = [
   {value:10,label:'10月'},{value:11,label:'11月'},{value:12,label:'12月'}
 ];
 
-function makeModule(title, category, icon, trendTarget, trendUnit, trendTitle, isMonthly, isLowerBetter, opts) {
+function makeModule(title, category, icon, trendTarget, unit, trendTitle, isMonthly, isLowerBetter, opts) {
   opts = opts || {};
   return {
-    title, category, icon, trendTarget, trendUnit, trendTitle,
+    title, category, icon, trendTarget, unit, trendTitle,
     currentMonth: new Date().getMonth() + 1,
     gridData: {},
     problem: '',
@@ -637,7 +637,7 @@ App = {
     if (this.cloudPollTimer) { clearInterval(this.cloudPollTimer); this.cloudPollTimer = null; }
     this.pullFromCloud(true);
     var self = this;
-    this.cloudPollTimer = setInterval(function() { self.pullFromCloud(false); }, POLL_INTERVAL);
+    this.cloudPollTimer = setInterval(function() { self.pullFromCloud(false); }, CLOUD_POLL_INTERVAL);
   },
 
   updateOnlineStatus(mode, text) {
