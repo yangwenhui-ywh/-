@@ -1,0 +1,2031 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>成型工段指标看板 - 多人协作</title>
+<script src="./chart.min.js"></script>
+<script>if(typeof Chart==='undefined'){document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"><\/script>');}</script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<!-- Gitee API sync - data stored in repo chengxingduan.json -->
+<style>
+/* ===== 蓝金主题（纯色，无渐变） ===== */
+:root{
+  --blue-900:#1e3a5f; --blue-800:#1e40af; --blue-700:#1d4ed8; --blue-600:#2563eb;
+  --blue-500:#3b82f6; --blue-400:#60a5fa; --blue-300:#93c5fd; --blue-200:#bfdbfe;
+  --blue-100:#dbeafe; --blue-50:#eff6ff;
+  --gold-600:#b45309; --gold-500:#d97706; --gold-400:#f59e0b; --gold-300:#fbbf24;
+  --gold-200:#fde68a; --gold-100:#fef3c7; --gold-50:#fffbeb;
+  --c-bg:#bae6fd;--c-card:#fff;--c-border:#93c5fd;
+  --c-text:#1e293b;--c-text-light:#64748b;
+  --c-kpi-green:#22c55e;--c-kpi-yellow:#eab308;--c-kpi-red:#ef4444;--c-kpi-gray:#cbd5e1;
+  --radius:12px;--shadow:0 2px 8px rgba(30,64,175,.08);
+  --shadow-lg:0 6px 24px rgba(30,64,175,.12);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:var(--c-bg);color:var(--c-text);font-size:14px;line-height:1.5}
+
+/* Login */
+.modal-overlay{position:fixed;top:0;right:0;bottom:0;left:0;background:#1e3a5f;display:flex;align-items:center;justify-content:center;z-index:9999}
+.modal-card{background:#fff;border-radius:20px;padding:56px 64px;text-align:center;width:480px;max-width:95vw;box-shadow:0 24px 64px rgba(0,0,0,.3);animation:fadeIn .4s ease;border:3px solid var(--gold-400);min-width:320px}
+@keyframes fadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.modal-card h2{font-size:28px;margin-bottom:8px;color:var(--blue-900)}
+.modal-card .icon-row{font-size:48px;margin-bottom:12px}
+.modal-subtitle{color:var(--c-text-light);margin-bottom:36px;font-size:16px}
+.modal-card input{width:100%;padding:16px 20px;border:2px solid var(--c-border);border-radius:12px;font-size:20px;text-align:center;margin-bottom:20px;transition:border-color .2s;height:56px}
+.modal-card input:focus{outline:none;border-color:var(--blue-500);border-width:3px}
+.btn-primary{width:100%;padding:16px;border:none;border-radius:12px;background:#d97706;color:#fff;font-size:20px;font-weight:600;cursor:pointer;transition:transform .15s,box-shadow .15s;height:56px}
+@media (max-width:600px){.modal-card{padding:40px 28px;width:auto}.modal-card h2{font-size:22px}.modal-card input{padding:12px 16px;font-size:16px;height:48px}.btn-primary{padding:14px;font-size:16px;height:48px}}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(217,119,6,.4)}
+.btn-primary:active{transform:translateY(0)}
+.btn-primary{-webkit-tap-highlight-color:transparent;touch-action:manipulation;user-select:none}
+
+/* Header */
+.app-header{background:#0284c7;color:#fff;padding:16px 28px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 3px 16px rgba(2,132,199,.3);position:sticky;top:0;z-index:100}
+.app-title{font-size:22px;font-weight:700;letter-spacing:1px;display:flex;align-items:center;gap:8px}
+.app-title .gold-dot{width:10px;height:10px;background:#f59e0b;border-radius:50%;display:inline-block;box-shadow:0 0 8px rgba(245,158,11,.5)}
+.header-meta{display:flex;gap:20px;margin-top:6px;font-size:13px;color:rgba(255,255,255,.85)}
+.header-meta label{display:flex;align-items:center;gap:4px}
+.meta-input{background:rgba(255,255,255,.95);border:1px solid rgba(255,255,255,.3);border-radius:6px;padding:3px 10px;color:#1e3a5f;width:110px;font-size:13px}
+.meta-input::placeholder{color:#94a3b8}
+.meta-input:focus{outline:none;background:#fff;border-color:#f59e0b;box-shadow:0 0 0 2px rgba(245,158,11,.15)}
+.meta-save-btn{background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);border-radius:6px;color:#fff;cursor:pointer;padding:3px 10px;font-size:13px;transition:all .2s;white-space:nowrap}.meta-save-btn:hover{background:rgba(255,255,255,.35);border-color:#f59e0b;color:#fbbf24}.meta-save-btn:active{transform:scale(.95)}.meta-save-btn.saved{background:#22c55e;border-color:#22c55e;color:#fff;pointer-events:none}
+.meta-save-hint{font-size:11px;color:#22c55e;opacity:0;transition:opacity .3s;margin-left:4px;white-space:nowrap}.meta-save-hint.show{opacity:1}
+.header-meta label{display:flex;align-items:center;gap:6px}
+.header-right{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.version-badge{font-size:11px;color:#fde68a;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);padding:2px 10px;border-radius:12px;font-weight:600;letter-spacing:.5px}
+.share-row{display:flex;gap:8px;align-items:center;font-size:12px}
+.share-code{display:flex;align-items:center;gap:4px;background:rgba(255,255,255,.12);border-radius:6px;padding:2px 8px;white-space:nowrap}
+.share-label{color:rgba(255,255,255,.7);font-size:10px}
+.share-id{color:#fde68a;font-weight:600;font-family:monospace;font-size:11px;letter-spacing:.5px}
+.btn-copy{background:none;border:none;color:rgba(255,255,255,.6);cursor:pointer;font-size:13px;padding:0 2px;line-height:1}
+.btn-copy:hover{color:#fff}
+.join-row{display:flex;align-items:center;gap:4px}
+.join-input{width:130px;height:22px;padding:1px 8px;border:1px solid rgba(255,255,255,.25);border-radius:4px;font-size:11px;background:rgba(255,255,255,.95);color:#1e3a5f;font-family:monospace}
+.join-input::placeholder{color:#94a3b8;font-family:inherit}
+.join-input:focus{outline:none;border-color:#f59e0b}
+/* Sync mode selector */
+.sync-mode-row{display:flex;gap:6px;align-items:center}
+.sync-mode-select{height:22px;padding:1px 4px;border:1px solid rgba(255,255,255,.25);border-radius:4px;font-size:11px;background:rgba(255,255,255,.95);color:#1e3a5f;cursor:pointer}
+.sync-mode-select:focus{outline:none;border-color:#f59e0b}
+.server-input{width:150px;height:22px;padding:1px 8px;border:1px solid rgba(255,255,255,.25);border-radius:4px;font-size:11px;background:rgba(255,255,255,.95);color:#1e3a5f;font-family:monospace}
+.server-input::placeholder{color:#94a3b8;font-size:10px}
+.server-input:focus{outline:none;border-color:#f59e0b}
+.online-users{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
+.user-avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:600;border:2px solid rgba(255,255,255,.4);cursor:default;position:relative;transition:transform .15s}
+.user-avatar:hover{transform:scale(1.1);z-index:5}
+.user-avatar .tooltip{position:absolute;bottom:-28px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.85);color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;white-space:nowrap;opacity:0;transition:opacity .2s;pointer-events:none}
+.user-avatar:hover .tooltip{opacity:1}
+.last-update{font-size:11px;color:rgba(255,255,255,.65)}
+
+/* Category Tabs */
+.category-tabs{display:flex;gap:6px;padding:12px 28px;background:#fff;border-bottom:2px solid var(--blue-100);overflow-x:auto;position:sticky;top:82px;z-index:90;box-shadow:0 2px 8px rgba(2,132,199,.08)}
+.cat-tab{display:flex;align-items:center;gap:6px;padding:8px 18px;border:none;background:transparent;border-radius:10px;cursor:pointer;font-size:14px;color:var(--c-text-light);font-weight:500;transition:all .2s;white-space:nowrap}
+.cat-tab:hover{background:var(--blue-50);color:var(--blue-700)}
+.cat-tab.active{background:#1d4ed8;color:#fff;box-shadow:0 2px 8px rgba(29,78,216,.3)}
+.cat-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+
+/* Grid Layout */
+.dashboard-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:18px;padding:20px 28px;max-width:1960px;margin:0 auto}
+@media(max-width:1600px){.dashboard-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:1024px){.dashboard-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:640px){.dashboard-grid{grid-template-columns:1fr}}
+
+/* Module Card */
+.module-card{background:var(--c-card);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;border-top:4px solid var(--cat-color,#2563eb);transition:box-shadow .2s}
+.module-card:hover{box-shadow:var(--shadow-lg)}
+.module-card.confirmed{border-top-color:#22c55e}
+
+.module-header{padding:12px 16px;display:flex;align-items:center;gap:10px;background:var(--cat-color-light,#eff6ff);border-bottom:1px solid var(--c-border)}
+.module-icon{font-size:20px}
+.module-title{font-size:15px;font-weight:600;color:var(--c-text);flex:1;border:none;background:transparent;padding:2px 6px;border-radius:4px;outline:none;min-width:120px}
+.module-title:focus{background:#fff;box-shadow:0 0 0 2px var(--blue-500)}
+.module-title:hover:not(:focus){background:rgba(0,0,0,.03)}
+.module-badge{font-size:11px;padding:2px 10px;border-radius:12px;background:var(--cat-color,#2563eb);color:#fff;font-weight:500}
+
+/* Month Selector */
+.month-picker{display:flex;align-items:center;gap:4px}
+.month-picker select{appearance:none;padding:3px 24px 3px 8px;border:2px solid #fbbf24;border-radius:6px;font-size:12px;font-weight:600;color:var(--blue-900);background:#fffbeb url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23b45309' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") no-repeat right 6px center;cursor:pointer;transition:border-color .15s}
+.month-picker select:focus{outline:none;border-color:#d97706;box-shadow:0 0 0 2px rgba(245,158,11,.15)}
+.month-picker select:hover{border-color:#f59e0b}
+
+/* Confirm button */
+.confirm-bar{display:flex;align-items:center;gap:8px;padding:6px 16px;background:#f0f4f8;border-bottom:1px solid var(--c-border)}
+.btn-confirm{padding:5px 14px;border:none;border-radius:6px;background:#2563eb;color:#fff;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:4px}
+.btn-confirm:hover{background:#1d4ed8}
+.btn-confirm.confirmed{background:#f59e0b}
+.btn-confirm.confirmed:hover{background:#d97706}
+.confirm-status{font-size:11px;color:var(--c-text-light)}
+.confirm-status.ok{color:#16a34a;font-weight:600}
+
+/* Calendar */
+.calendar-section{padding:12px 16px 8px}
+.calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cal-day-header{font-size:10px;text-align:center;color:var(--c-text-light);padding:2px 0;font-weight:600}
+.cal-cell{min-height:34px;min-width:34px;aspect-ratio:1;border-radius:7px;border:1px solid var(--c-border);display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;background:#f8fafc;transition:all .15s}
+.cal-cell:hover{border-color:#93c5fd;background:var(--blue-50)}
+.cal-cell.editing{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.2)}
+.cal-day-num{font-size:9px;color:var(--c-text-light);line-height:1}
+.cal-input{width:100%;border:none;text-align:center;font-size:11px;background:transparent;padding:1px;font-weight:600;color:var(--c-text)}
+.cal-input:focus{outline:none}
+.cal-cell.kpi-green{background:rgba(34,197,94,.12);border-color:var(--c-kpi-green)}
+.cal-cell.kpi-yellow{background:rgba(234,179,8,.12);border-color:var(--c-kpi-yellow)}
+.cal-cell.kpi-red{background:rgba(239,68,68,.1);border-color:var(--c-kpi-red)}
+
+/* Target threshold editor */
+.target-editor{padding:6px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:12px;border-top:1px dashed var(--c-border)}
+.target-editor .te-label{color:var(--c-text-light);white-space:nowrap;font-weight:500}
+.target-editor .te-group{display:flex;align-items:center;gap:4px}
+.target-editor input{width:56px;padding:3px 6px;border:1px solid var(--c-border);border-radius:5px;font-size:12px;text-align:center;color:var(--c-text);background:#fff;transition:border-color .15s}
+.target-editor input:focus{outline:none;border-color:#f59e0b;box-shadow:0 0 0 2px rgba(245,158,11,.1)}
+.target-editor input.target-input{width:64px;font-weight:600;border-color:#fbbf24;background:#fffbeb;color:var(--gold-600)}
+.target-editor .te-unit{color:var(--c-text-light);font-size:11px}
+.te-status-dot{width:10px;height:10px;border-radius:3px;display:inline-block;flex-shrink:0}
+.te-status-dot.green{background:var(--c-kpi-green)}
+.te-status-dot.yellow{background:var(--c-kpi-yellow)}
+.te-status-dot.red{background:var(--c-kpi-red)}
+
+/* People table */
+.people-section{padding:12px 16px 4px}
+.people-section-title{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--blue-700);margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid var(--blue-200)}
+.people-section-hint{font-size:11px;font-weight:400;color:var(--c-text-muted)}
+.people-table{width:100%;border-collapse:collapse;font-size:12px}
+.people-table th{background:var(--blue-50);padding:8px 4px;text-align:center;font-weight:600;color:var(--blue-800);font-size:11px;border-bottom:2px solid var(--blue-200)}
+.people-table td{padding:6px 4px;text-align:center;border-bottom:1px solid var(--c-border)}
+.people-input{width:70px;border:1px solid var(--c-border);border-radius:4px;text-align:center;font-size:12px;padding:4px 2px;background:#fff;transition:border-color .15s}
+.people-input:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 2px rgba(59,130,246,.15)}
+.name-input{border:1px solid var(--c-border);border-radius:4px;font-size:12px;padding:4px 8px;background:#fff;font-weight:500;width:90px;transition:border-color .15s}
+.name-input:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 2px rgba(59,130,246,.15)}
+.people-sum-row td{background:#eff6ff;font-weight:700;color:var(--blue-700);border-top:2px solid var(--blue-300)}
+.btn-del-row{background:none;border:none;color:#ef4444;cursor:pointer;font-size:14px;padding:2px 4px;border-radius:4px;transition:background .15s}
+.btn-del-row:hover{background:#fef2f2}
+.people-actions{padding:6px 16px 8px}
+.btn-add-row{padding:4px 12px;border:1px dashed #2563eb;border-radius:6px;background:#fff;color:#2563eb;font-size:12px;cursor:pointer;font-weight:500;transition:all .15s}
+.btn-add-row:hover{background:var(--blue-50);border-style:solid}
+
+/* Multiskill table */
+.skill-cell{position:relative;display:flex;align-items:center;justify-content:center;gap:4px;padding:4px 6px}
+.skill-select{width:100%;max-width:70px;padding:3px 2px;border:1px solid var(--c-border);border-radius:4px;font-size:11px;text-align:center;background:#fff;cursor:pointer;appearance:none;-webkit-appearance:none;color:var(--c-text);transition:border-color .15s}
+.skill-select:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 2px rgba(59,130,246,.15)}
+.skill-circle{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.skill-circle svg{width:20px;height:20px}
+.multiskill-summary{padding:8px 16px 4px}
+.multiskill-summary table{width:100%;border-collapse:collapse;font-size:11px}
+.multiskill-summary th{background:var(--gold-50);padding:5px 4px;text-align:center;font-weight:600;color:var(--gold-600);border-bottom:2px solid var(--gold-300)}
+.multiskill-summary td{padding:4px;text-align:center;border-bottom:1px solid var(--c-border)}
+.summary-val{font-weight:700;font-size:13px}
+.summary-val.green{color:#22c55e}
+.summary-val.yellow{color:#f59e0b}
+.summary-val.red{color:#ef4444}
+.skill-name-input{border:1px solid var(--c-border);border-radius:4px;font-size:12px;padding:4px 6px;background:#fff;font-weight:500;width:80px;transition:border-color .15s;text-align:center}
+.skill-name-input:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 2px rgba(59,130,246,.15)}
+
+/* Trend */
+.trend-section{padding:8px 16px 12px}
+.trend-title{font-size:12px;font-weight:600;color:var(--c-text-light);margin-bottom:4px;border:none;background:transparent;padding:2px 4px;border-radius:4px;width:100%;transition:background .15s,border-color .15s}.trend-title:hover{background:#f0f4ff}.trend-title:focus{outline:none;border-color:var(--blue-500);background:#fff;box-shadow:0 0 0 2px rgba(29,78,216,.15)}
+.trend-title-wrap{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.trend-title-save{font-size:11px;color:#22c55e;opacity:0;transition:opacity .3s;white-space:nowrap;cursor:default}.trend-title-save.show{opacity:1}
+.chart-container{height:130px;position:relative}
+
+/* Problem */
+.problem-section{padding:8px 16px 12px;border-top:1px solid var(--c-border)}
+.problem-label{font-size:12px;font-weight:600;color:var(--c-text-light);margin-bottom:4px}
+.problem-input{width:100%;min-height:48px;border:1px solid var(--c-border);border-radius:7px;padding:6px 10px;font-size:12px;resize:vertical;font-family:inherit;color:var(--c-text);background:#f8fafc;transition:border-color .15s}
+.problem-input:focus{outline:none;border-color:#60a5fa;background:#fff}
+
+/* Footer */
+.app-footer{background:#fff;border-top:2px solid var(--blue-100);padding:12px 28px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.kpi-legend{display:flex;gap:16px;flex-wrap:wrap}
+.legend-item{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--c-text-light)}
+.legend-dot{width:12px;height:12px;border-radius:3px}
+.legend-dot.green{background:var(--c-kpi-green)}
+.legend-dot.yellow{background:var(--c-kpi-yellow)}
+.legend-dot.red{background:var(--c-kpi-red)}
+.legend-dot.gray{background:var(--c-kpi-gray)}
+.footer-info{font-size:11px;color:var(--c-text-light)}
+
+/* Button toolbar */
+.btn-toolbar{display:flex;gap:8px;margin-left:auto}
+.btn-tool{display:flex;align-items:center;gap:4px;padding:5px 12px;border:1px solid var(--c-border);border-radius:8px;background:#fff;font-size:12px;color:var(--c-text-light);cursor:pointer;transition:all .15s;font-weight:500}
+.btn-tool:hover{background:var(--blue-50);border-color:#60a5fa}
+.btn-tool.export{color:var(--gold-600);border-color:#fbbf24}
+.btn-tool.export:hover{background:var(--gold-50);border-color:#f59e0b}
+.btn-tool.reset{color:var(--c-kpi-red);border-color:#fca5a5}
+.btn-tool.reset:hover{background:#fef2f2;border-color:#ef4444}
+
+/* Remote cursor */
+.remote-cursor{position:fixed;pointer-events:none;z-index:50;transition:all .1s ease-out}
+.remote-cursor-label{position:absolute;top:-20px;left:0;background:var(--cursor-color);color:#fff;padding:1px 6px;border-radius:4px 4px 4px 0;font-size:10px;white-space:nowrap;font-weight:600}
+.remote-cursor-dot{width:10px;height:10px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--cursor-color);border:1px solid #fff}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:#93c5fd;border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:#60a5fa}
+::-webkit-scrollbar-track{background:transparent}
+
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+
+.status-capsule{display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:600}
+.status-capsule.online{background:rgba(34,197,94,.15);color:#16a34a}
+.status-capsule.offline{background:rgba(148,163,184,.15);color:#64748b}
+.status-capsule.local{background:rgba(245,158,11,.15);color:#d97706}
+/* 诊断面板 */
+.debug-bar{display:flex;align-items:center;gap:8px 18px;flex-wrap:wrap;padding:4px 16px;background:rgba(15,23,42,.7);border-bottom:1px solid rgba(99,102,241,.15);font-size:11px;color:#94a3b8}
+.debug-bar .debug-label{color:#818cf8;font-weight:700;margin-right:2px}
+.debug-bar .debug-item{display:inline-flex;align-items:center;gap:3px;white-space:nowrap}
+.debug-bar code{background:rgba(99,102,241,.12);color:#a5b4fc;padding:1px 6px;border-radius:3px;font-size:10px;font-family:'SF Mono','Cascadia Code',Consolas,monospace}
+.debug-bar .debug-toggle{background:none;border:none;color:#64748b;cursor:pointer;font-size:10px;padding:0 4px;margin-left:auto}
+.debug-bar.collapsed .debug-item{display:none}
+.debug-bar.collapsed .debug-toggle{transform:rotate(180deg)}
+
+/* Confirm toast */
+.confirm-toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#22c55e;color:#fff;padding:10px 24px;border-radius:8px;font-size:14px;font-weight:600;z-index:200;box-shadow:0 4px 16px rgba(34,197,94,.3);animation:slideUp .3s ease}
+@keyframes slideUp{from{opacity:0;transform:translate(-50%,20px)}to{opacity:1;transform:translate(-50%,0)}}
+</style>
+</head>
+<body>
+
+<div id="app">
+
+<header class="app-header">
+<div class="header-left">
+<h1 class="app-title"><span class="gold-dot"></span>成型工段指标看板</h1>
+<div class="header-meta">
+<label>工段：<input type="text" id="workDuan" class="meta-input" placeholder="成型工段"><button class="meta-save-btn" data-target="workDuan" title="保存修改">保存</button><span class="meta-save-hint" id="workDuanHint">✓ 已保存</span></label>
+<label>班组：<input type="text" id="banZu" class="meta-input" placeholder="请输入"><button class="meta-save-btn" data-target="banZu" title="保存修改">保存</button><span class="meta-save-hint" id="banZuHint">✓ 已保存</span></label>
+</div>
+</div>
+<div class="header-right">
+<div class="sync-mode-row" id="syncModeRow">
+  <select class="sync-mode-select" id="syncModeSelect">
+    <option value="auto">自动检测</option>
+    <option value="local">本地服务器</option>
+    <option value="cloud" selected>云端(GitHub)</option>
+  </select>
+  <input type="text" class="server-input" id="serverAddrInput" placeholder="服务器地址: 192.168.x.x:3000" style="display:none">
+</div>
+<div class="share-row" id="shareRowCloud" style="display:flex">
+  <span style="color:rgba(255,255,255,.7);font-size:13px">所有人打开同一网址即可协作</span>
+</div>
+</div>
+<div class="version-badge" id="versionBadge">v7.8-gitee</div>
+<div class="online-users" id="onlineUsers"></div>
+<div class="last-update" id="lastUpdate"></div></header>
+
+<!-- 诊断面板：对比两台设备数据是否一致 -->
+<div class="debug-bar" id="debugBar">
+  <span class="debug-label">🔍 数据诊断</span>
+  <span class="debug-item">数据指纹: <code id="debugFingerprint">---</code></span>
+  <span class="debug-item">内容哈希: <code id="debugCloudSHA">---</code></span>
+  <span class="debug-item">同步时间: <code id="debugSyncTime">---</code></span>
+  <span class="debug-item">来源: <code id="debugSource">---</code></span>
+  <span class="debug-item" id="debugErrorItem" style="display:none">错误: <code id="debugError" style="color:#f87171">---</code></span>
+  <button class="debug-toggle" id="debugToggle" title="收起">▲</button>
+</div>
+
+<nav class="category-tabs">
+<button class="cat-tab active" data-cat="all">全部指标</button>
+<button class="cat-tab" data-cat="安全"><span class="cat-dot" style="background:#2563eb"></span>安全</button>
+<button class="cat-tab" data-cat="质量"><span class="cat-dot" style="background:#0891b2"></span>质量</button>
+<button class="cat-tab" data-cat="交付"><span class="cat-dot" style="background:#1d4ed8"></span>交付</button>
+<button class="cat-tab" data-cat="成本"><span class="cat-dot" style="background:#4f46e5"></span>成本</button>
+<button class="cat-tab" data-cat="改革"><span class="cat-dot" style="background:#0284c7"></span>改革</button>
+<div class="btn-toolbar">
+<button class="btn-tool export" id="btnExport">📥 导出数据</button>
+<button class="btn-tool export" id="btnExportConfirmed">📋 导出已确认</button>
+<button class="btn-tool reset" id="btnReset">🔄 清空重置</button>
+</div>
+</nav>
+
+<main class="dashboard-grid" id="dashboardGrid"></main>
+
+<footer class="app-footer">
+<div class="kpi-legend">
+<span class="legend-item"><span class="legend-dot green"></span>达标</span>
+<span class="legend-item"><span class="legend-dot yellow"></span>需关注</span>
+<span class="legend-item"><span class="legend-dot red"></span>未达标</span>
+<span class="legend-item"><span class="legend-dot gray"></span>休息日</span>
+</div>
+<div class="footer-info">云端数据实时同步 · 跨设备多人协作 · 数据自动保存 · 确认后可后台导出</div>
+<div id="statusMsg" style="font-size:11px;color:#94a3b8;text-align:center;margin-top:4px"></div>
+</footer>
+
+</div>
+<script>
+/* ===== 成型工段指标看板 - 稳定修复版 ===== */
+
+/* ===== 老浏览器 Polyfills ===== */
+// Object.entries
+if(!Object.entries){Object.entries=function(e){var r=Object.keys(e),n=r.length,a=new Array(n);while(n--)a[n]=[r[n],e[r[n]]];return a};}
+// Array.from
+if(!Array.from){Array.from=(function(){var toStr=Object.prototype.toString,isCallable=function(fn){return typeof fn==='function'||toStr.call(fn)==='[object Function]';},toInteger=function(v){var n=Number(v);if(isNaN(n))return 0;if(n===0||!isFinite(n))return n;return(n>0?1:-1)*Math.floor(Math.abs(n));},maxSafe=Math.pow(2,53)-1,toLength=function(v){var len=toInteger(v);return Math.min(Math.max(len,0),maxSafe);};return function(arrayLike,mapFn,thisArg){var C=this,items=Object(arrayLike);if(arrayLike==null)throw new TypeError('Array.from requires an array-like object - not null or undefined');if(typeof mapFn!=='undefined'&&!isCallable(mapFn))throw new TypeError('Array.from: when provided, the second argument must be a function');var T,usingIterator=typeof Symbol==='function'&&typeof Symbol.iterator==='symbol'&&items[Symbol.iterator];if(usingIterator){if(isCallable(C))C=new C();else C=[];var iterator=items[Symbol.iterator](),next,result=[],k=0;while(!(next=iterator.next()).done){var nextValue=next.value;if(mapFn)result[k]=typeof T==='undefined'?mapFn(nextValue,k):mapFn.call(T,nextValue,k);else result[k]=nextValue;k+=1;}result.length=k;return result;}var len=toLength(items.length),A=isCallable(C)?Object(new C(len)):new Array(len),k=0,kValue;while(k<len){kValue=items[k];if(mapFn)A[k]=typeof T==='undefined'?mapFn(kValue,k):mapFn.call(T,kValue,k);else A[k]=kValue;k+=1;}A.length=len;return A;};})();}
+// fetch
+if(!window.fetch){window.fetch=function(url,opts){opts=opts||{};return new Promise(function(resolve,reject){var xhr=new XMLHttpRequest();xhr.open(opts.method||'GET',url,true);if(opts.headers){var ks=Object.keys(opts.headers);for(var i=0;i<ks.length;i++)xhr.setRequestHeader(ks[i],opts.headers[ks[i]]);}xhr.onload=function(){var r={ok:xhr.status>=200&&xhr.status<300,status:xhr.status,statusText:xhr.statusText,headers:{get:function(k){return xhr.getResponseHeader(k);}}};r.json=function(){return Promise.resolve(JSON.parse(xhr.responseText));};r.text=function(){return Promise.resolve(xhr.responseText);};resolve(r);};xhr.onerror=function(){reject(new Error('Network error'));};xhr.send(opts.body||null);});};}
+// Promise (minimal)
+if(typeof Promise==='undefined'){document.getElementById('statusMsg')&&(document.getElementById('statusMsg').textContent='浏览器版本过旧，不支持看板功能。请使用Chrome/Firefox/Edge浏览器打开。');throw new Error('Promise not supported');}
+
+/* ===== App ===== */
+var App; // 声明在全局作用域
+
+// 全局错误捕获
+window.onerror = function(msg, url, line) {
+  var d = document.getElementById('statusMsg');
+  if (d) d.textContent = 'JS错误: ' + msg + ' (行' + line + ')';
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+  var statusEl = document.getElementById('statusMsg');
+  // 环境检测
+  if (typeof Chart === 'undefined') {
+    if (statusEl) statusEl.innerHTML = '<span style="color:#f59e0b;font-weight:600">⚠ 图表库加载中，趋势图可能暂时无法显示。如网络正常，请等待几秒后刷新。</span>';
+  }
+  if (typeof Promise === 'undefined') {
+    if (statusEl) statusEl.innerHTML = '<span style="color:#ef4444;font-weight:600">❌ 浏览器版本过旧，不支持看板功能。请使用最新版 Chrome/Firefox/Edge 打开。</span>';
+    return;
+  }
+  try {
+    App.init();
+    // 自动登录：优先使用上次保存的姓名，否则默认"管理员"
+    App.myName = localStorage.getItem('dianjian_username') || '管理员';
+    App.loadAndStart();
+    // 诊断面板折叠按钮
+    var debugToggle = document.getElementById('debugToggle');
+    if (debugToggle) {
+      debugToggle.addEventListener('click', function() {
+        var bar = document.getElementById('debugBar');
+        bar.classList.toggle('collapsed');
+        debugToggle.textContent = bar.classList.contains('collapsed') ? '▼' : '▲';
+      });
+    }
+    if (statusEl && typeof Chart !== 'undefined') statusEl.textContent = '✅ 系统就绪';
+  } catch(e) {
+    if (statusEl) statusEl.textContent = '❌ 初始化失败: ' + e.message;
+  }
+});
+
+var CATEGORY_COLORS = {
+  '安全':{color:'#2563eb',light:'#eff6ff'},
+  '质量':{color:'#0891b2',light:'#ecfeff'},
+  '交付':{color:'#1d4ed8',light:'#eef2ff'},
+  '成本':{color:'#4f46e5',light:'#eef2ff'},
+  '改革':{color:'#0284c7',light:'#f0f9ff'}
+};
+
+var ICONS = {
+  shield:'🛡', broom:'🧹', 'check-circle':'✅', 'search-check':'🔍',
+  truck:'🚚', clock:'⏱', coins:'💰', zap:'⚡', lightbulb:'💡', users:'👥'
+};
+
+var WEEK_HEADERS = ['日','一','二','三','四','五','六'];
+var APP_VERSION = 'v1.0-cxd-gitee';
+var LS_KEY = 'chengxingduan_dashboard_v1';
+var BC_CHANNEL = 'chengxingduan_bc_v1';
+// === Gitee API 配置（国内可访问，替代 GitHub API） ===
+var GITEE_TOKEN = String.fromCharCode(100,99,100,98,100,97,54,55,55,54,53,53,98,49,101,51,100,97,53,101,101,100,53,51,97,101,48,97,51,54,100,99);
+var GITEE_REPO = 'yang-wenhui222/kanban-data'; var GITEE_FILE = 'chengxingduan.json';
+var GITEE_API_CONTENT = 'https://gitee.com/api/v5/repos/' + GITEE_REPO + '/contents/' + GITEE_FILE;
+var CLOUD_POLL_INTERVAL = 3000;
+var CLOUD_PUSH_DEBOUNCE = 800;
+
+// 保留 GitHub Token 用于推送 index.html（仅开发用途）
+var GITHUB_TOKEN = String.fromCharCode(103,104,112,95,67,105,117,85,86,106,111,55,120,82,66,67,114,56,104,72,103,118,70,72,67,98,48,109,86,114,81,53,76,77,48,88,102,90,119,65);
+
+var MONTH_OPTIONS = [
+  {value:1,label:'1月'},{value:2,label:'2月'},{value:3,label:'3月'},
+  {value:4,label:'4月'},{value:5,label:'5月'},{value:6,label:'6月'},
+  {value:7,label:'7月'},{value:8,label:'8月'},{value:9,label:'9月'},
+  {value:10,label:'10月'},{value:11,label:'11月'},{value:12,label:'12月'}
+];
+
+function makeModule(title, category, icon, trendTarget, unit, trendTitle, isMonthly, isLowerBetter, opts) {
+  opts = opts || {};
+  return {
+    title, category, icon, trendTarget, unit, trendTitle,
+    currentMonth: new Date().getMonth() + 1,
+    gridData: {},
+    problem: '',
+    isMonthly: !!isMonthly,
+    isLowerBetter: !!isLowerBetter,
+    kpiGreenMin: opts.kpiGreenMin !== undefined ? opts.kpiGreenMin : null,
+    kpiGreenMax: opts.kpiGreenMax !== undefined ? opts.kpiGreenMax : null,
+    kpiYellowMin: opts.kpiYellowMin !== undefined ? opts.kpiYellowMin : null,
+    kpiYellowMax: opts.kpiYellowMax !== undefined ? opts.kpiYellowMax : null,
+    confirmed: {} // { "7": { by: "张三", at: "iso", data: {...} } }
+  };
+}
+
+function initGrids(data) {
+  var mods = (data && data.modules) ? data.modules : (data || {}); // 兼容完整 data 对象和纯 modules 对象
+  var entries = Object.entries(mods);
+  for (var i = 0; i < entries.length; i++) {
+    var id = entries[i][0], mod = entries[i][1];
+    // 兼容云端旧格式: name → title
+    if (!mod.title && mod.name) { mod.title = mod.name; }
+    // 兼容云端旧格式: trendUnit → unit
+    if (!mod.unit && mod.trendUnit) { mod.unit = mod.trendUnit; }
+    var mKey = String(mod.currentMonth);
+    if (!mod.gridData) mod.gridData = {};
+    if (!mod.gridData[mKey]) mod.gridData[mKey] = {};
+    if (!mod.confirmed) mod.confirmed = {};
+    if (mod.kpiGreenMin === undefined && mod.kpiGreenMin !== 0) {
+      if (mod.isLowerBetter) {
+        mod.kpiGreenMax = mod.trendTarget;
+        mod.kpiYellowMax = Math.round(mod.trendTarget * 1.2 * 100) / 100;
+      } else {
+        mod.kpiGreenMin = mod.trendTarget;
+        mod.kpiYellowMin = Math.round(mod.trendTarget * 0.85 * 100) / 100;
+      }
+    }
+    // 归一化 people 数组（确保字段齐全）
+    if (mod.people && Array.isArray(mod.people)) {
+      if (mod.multiskill) {
+        mod.people = mod.people.map(function(p) {
+          return { name: p.name || '', fangbo: p.fangbo || '', fenjian: p.fenjian || '', choujian: p.choujian || '', baozhuang: p.baozhuang || '' };
+        });
+      } else {
+        mod.people = mod.people.map(function(p) {
+          return { name: p.name || '', w1: p.w1 || '', w2: p.w2 || '', w3: p.w3 || '', w4: p.w4 || '' };
+        });
+      }
+    }
+  }
+  return data;
+}
+
+var INITIAL_DATA = {
+  work段: '成型工段', 班组: '', lastUpdate: '', year: new Date().getFullYear(),
+  modules: {
+    safety_hazard:      makeModule('安全---安全隐患数',       '安全','shield',      5,   '个',   '安全隐患数趋势图(每天)', false, true,  {kpiGreenMax:5,   kpiYellowMax:6}),
+    safety_5s:          makeModule('5S---5S评分',             '安全','broom',       85,  '分',   '5S评分趋势图(每周)',    false, false, {kpiGreenMin:85,  kpiYellowMin:72}),
+    quality_passrate:   makeModule('质量---合格率',           '质量','check-circle',0.9, '%',    '质量合格率趋势图(每天)',  false, false, {kpiGreenMin:0.9, kpiYellowMin:0.8}),
+    quality_inspection: makeModule('质量---自互检',           '质量','search-check',0,   '%',    '自互检趋势图(每天)',     false, false, {kpiGreenMin:0,   kpiYellowMin:0}),
+    delivery_completion:makeModule('交付---累计计划完成率',   '交付','truck',       1,    '%',    '累计作业完成率趋势图',    false, false, {kpiGreenMin:1,   kpiYellowMin:0.85}),
+    delivery_cycle:     makeModule('交付---平均生产周期',     '交付','clock',       48,  'h',    '平均生产周期趋势图(每天)', false, true,  {kpiGreenMax:48,  kpiYellowMax:58}),
+    cost_output:        makeModule('成本---人均产出',         '成本','coins',       0.5, '件',   '人均产出趋势图(每天)',    false, false, {kpiGreenMin:0.5, kpiYellowMin:0.4}),
+    cost_energy:        makeModule('成本---单位批次能耗',     '成本','zap',         80,  'kWh',  '单位批次能耗趋势图(每天)', false, true,  {kpiGreenMax:80,  kpiYellowMax:96}),
+    improve_proposal:   makeModule('改革---提案改善',         '改革','lightbulb',   8,   '件',   '提案改善趋势图(每周)',    false, false, {kpiGreenMin:8,   kpiYellowMin:6}),
+    improve_multiskill: makeModule('改革---多能工比例',       '改革','users',       0.6, '%',    '多能工比例趋势图(每月)',  true,  false, {kpiGreenMin:0.6, kpiYellowMin:0.45, multiskill: true})
+  }
+};
+
+INITIAL_DATA.modules.improve_proposal.people = [
+  {name:'张照卿',w1:'',w2:'',w3:'',w4:''},{name:'白扬',w1:'',w2:'',w3:'',w4:''},
+  {name:'李化传',w1:'',w2:'',w3:'',w4:''},{name:'张艳玲',w1:'',w2:'',w3:'',w4:''},
+  {name:'任丽范',w1:'',w2:'',w3:'',w4:''},{name:'赵玉建',w1:'',w2:'',w3:'',w4:''},
+  {name:'关键江',w1:'',w2:'',w3:'',w4:''},{name:'何卓栩',w1:'',w2:'',w3:'',w4:''},
+  {name:'赵冰',w1:'',w2:'',w3:'',w4:''},{name:'任强',w1:'',w2:'',w3:'',w4:''},
+  {name:'杨杭',w1:'',w2:'',w3:'',w4:''},{name:'杨尘',w1:'',w2:'',w3:'',w4:''},
+  {name:'宋金城',w1:'',w2:'',w3:'',w4:''},{name:'王金东',w1:'',w2:'',w3:'',w4:''}
+];
+
+// 多能工初始数据 (multiskill: fangbo=方波筛选, fenjian=分拣, choujian=抽检, baozhuang=包装)
+INITIAL_DATA.modules.improve_multiskill.people = [
+  {name:'张照卿',fangbo:'',fenjian:'',choujian:'',baozhuang:''},
+  {name:'白扬',fangbo:'',fenjian:'',choujian:'',baozhuang:''},
+  {name:'李化传',fangbo:'',fenjian:'',choujian:'',baozhuang:''},
+  {name:'赵玉建',fangbo:'',fenjian:'',choujian:'',baozhuang:''},
+  {name:'关键江',fangbo:'',fenjian:'',choujian:'',baozhuang:''}
+];
+
+function getGrid(mod) {
+  var mKey = String(mod.currentMonth);
+  if (!mod.gridData) mod.gridData = {};
+  if (!mod.gridData[mKey]) mod.gridData[mKey] = {};
+  return mod.gridData[mKey];
+}
+
+/* ===== App ===== */
+App = {
+  socket: null, data: null, charts: {}, currentCategory: 'all',
+  myName: '', remoteCursors: {}, editTimers: {}, isConnected: false, bc: null,
+  syncMode: 'auto', // 'auto' | 'local' | 'cloud'
+  serverAddr: '', localServerReachable: false,
+  cloudBlobId: null, cloudSHA: null, cloudDataHash: null, cloudPollTimer: null, cloudRenewTimer: null, cloudRetryTimer: null, cloudReachable: false,
+  _pushTimer: null, _pushRetryTimer: null, _pushRetryCount: 0,
+
+  init() {
+    document.querySelectorAll('.cat-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        this.currentCategory = tab.dataset.cat;
+        this.renderModules();
+      });
+    });
+    document.getElementById('btnExport').addEventListener('click', () => this.exportData());
+    document.getElementById('btnExportConfirmed').addEventListener('click', () => this.exportConfirmed());
+    document.getElementById('btnReset').addEventListener('click', () => {
+      if (confirm('确定要清空所有数据？此操作不可撤销！')) this.resetData();
+    });
+    // 版本号
+    var vb = document.getElementById('versionBadge');
+    if (vb) vb.textContent = APP_VERSION;
+    // GitHub 版不需要加入会话——所有人自动共享同一份数据
+    // 同步模式选择器
+    var modeSel = document.getElementById('syncModeSelect');
+    var srvInput = document.getElementById('serverAddrInput');
+    if (modeSel) {
+      modeSel.addEventListener('change', function() {
+        // GitHub 版固定云端模式
+        modeSel.value = 'cloud';
+      }.bind(this));
+    }
+    if (srvInput) {
+      srvInput.addEventListener('change', function() {
+        this.serverAddr = srvInput.value.trim();
+        this.saveSyncMode();
+        if (this.syncMode === 'local' && this.serverAddr) this.restartSync();
+      }.bind(this));
+      srvInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+          this.serverAddr = srvInput.value.trim();
+          this.saveSyncMode();
+          if (this.syncMode === 'local' && this.serverAddr) this.restartSync();
+        }
+      }.bind(this));
+    }
+    // 页面关闭/刷新前立即推送数据，防止丢失
+    var self = this;
+    window.addEventListener('beforeunload', function() {
+      clearTimeout(self._pushTimer);
+      clearTimeout(self._pushRetryTimer);
+      if (self.cloudReachable && self.data && self.data.modules) {
+        self.pushToCloud(true);
+      }
+    });
+    // visibilitychange: 页面隐藏时也保存
+    document.addEventListener('visibilitychange', function() {
+      if (document.hidden) {
+        clearTimeout(self._pushTimer);
+        if (self.cloudReachable && self.data && self.data.modules) {
+          self.pushToCloud(true);
+        }
+      }
+    });
+    // GitHub 版不需要加入会话——所有人自动共享同一份数据
+    // 同步模式选择器
+    var modeSel = document.getElementById('syncModeSelect');
+    var srvInput = document.getElementById('serverAddrInput');
+    if (modeSel) {
+      modeSel.addEventListener('change', function() {
+        // GitHub 版固定云端模式
+        modeSel.value = 'cloud';
+      }.bind(this));
+    }
+    if (srvInput) {
+      srvInput.addEventListener('change', function() {
+        this.serverAddr = srvInput.value.trim();
+        this.saveSyncMode();
+        if (this.syncMode === 'local' && this.serverAddr) this.restartSync();
+      }.bind(this));
+      srvInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+          this.serverAddr = srvInput.value.trim();
+          this.saveSyncMode();
+          if (this.syncMode === 'local' && this.serverAddr) this.restartSync();
+        }
+      }.bind(this));
+    }
+  },
+
+  loadAndStart() {
+    var saved = localStorage.getItem(LS_KEY);
+    // 尝试从旧版本迁移数据
+    if (!saved) {
+      var oldKeys = ['dianjian_dashboard_v5','dianjian_dashboard_v4','dianjian_dashboard_v3'];
+      for (var ki = 0; ki < oldKeys.length; ki++) {
+        saved = localStorage.getItem(oldKeys[ki]);
+        if (saved) break;
+      }
+    }
+    if (saved) { try { this.data = initGrids(JSON.parse(saved)); } catch (e) {} }
+    if (!this.data || !this.data.modules || Object.keys(this.data.modules).length === 0) {
+      this.data = initGrids(JSON.parse(JSON.stringify(INITIAL_DATA)));
+    }
+    // 先显示同步中，等云端数据回来再渲染
+    this.updateOnlineStatus('connecting', '正在同步云端数据...');
+    try {
+      this.bc = new BroadcastChannel(BC_CHANNEL);
+      var self = this;
+      this.bc.onmessage = function(e) {
+        if (e.data && e.data.type === 'data-sync' && e.data.from !== self.myName) {
+          self.data.modules = e.data.modules;
+          self.data['work段'] = e.data['work段'];
+          self.data['班组'] = e.data['班组'];
+          self.data.lastUpdate = e.data.lastUpdate;
+          if (e.data.cloudSHA) self.cloudSHA = e.data.cloudSHA;
+          self.renderModules();
+          self.renderHeaderMetaOnly();
+        }
+      };
+    } catch (e) {}
+    this.initSync();
+  },
+
+  // ===== GitHub API 云同步 =====
+
+  loadSyncMode() {
+    this.syncMode = 'cloud';
+    this.serverAddr = '';
+  },
+
+  saveSyncMode() {},
+
+  initSync() {
+    this.isConnected = true;
+    this.cloudSHA = null;
+    this.cloudDataHash = null;
+    this.cloudReachable = false;
+    this._pushRetryCount = 0;
+    this.loadSyncMode();
+    this.startSync();
+  },
+
+  stopAllSync() {
+    if (this.cloudPollTimer) { clearInterval(this.cloudPollTimer); this.cloudPollTimer = null; }
+    if (this.cloudRetryTimer) { clearTimeout(this.cloudRetryTimer); this.cloudRetryTimer = null; }
+  },
+
+  restartSync() {
+    this.stopAllSync();
+    this.cloudReachable = false;
+    this.startSync();
+  },
+
+  startSync() {
+    this.checkCloudAndStart();
+  },
+
+  checkCloudAndStart() {
+    // 直接启动云同步，由 pullFromCloud 自行处理连接失败
+    this.cloudReachable = true;
+    this._startCloudSync();
+  },
+
+  _startCloudSync() {
+    if (this.cloudRetryTimer) { clearTimeout(this.cloudRetryTimer); this.cloudRetryTimer = null; }
+    if (this.cloudPollTimer) { clearInterval(this.cloudPollTimer); this.cloudPollTimer = null; }
+    this.pullFromCloud(true);
+    var self = this;
+    this.cloudPollTimer = setInterval(function() { self.pullFromCloud(false); }, CLOUD_POLL_INTERVAL);
+  },
+
+  updateOnlineStatus(mode, text) {
+    var el = document.getElementById('onlineUsers');
+    if (!el) return;
+    if (mode === 'connecting') {
+      el.innerHTML = '<span class="status-capsule offline">\u25cc ' + (text || '正在连接...') + '</span>';
+    } else if (mode === 'online') {
+      el.innerHTML = '<span class="status-capsule online">\u25cf 云端协作</span>';
+    } else {
+      el.innerHTML = '<span class="status-capsule offline">\u25d0 ' + (text || '离线模式（数据保存本地）') + '</span>';
+    }
+  },
+
+  // 从 Gitee API 拉取数据（国内可访问）
+  pullFromCloud(isInit) {
+    if (!this.cloudReachable) return;
+    var self = this;
+
+    var url = GITEE_API_CONTENT + '?access_token=' + GITEE_TOKEN + '&t=' + Date.now();
+    fetch(url, { cache: 'no-store' })
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP:' + r.status);
+      return r.json();
+    })
+    .then(function(apiResp) {
+      if (!apiResp.sha) throw new Error('无SHA数据');
+      
+      // 用 SHA 比对是否有变化
+      if (!isInit && apiResp.sha === self.cloudSHA) return;
+
+      // 解码 base64 内容
+      var jsonStr;
+      try {
+        jsonStr = decodeURIComponent(escape(atob(apiResp.content)));
+      } catch(e) {
+        jsonStr = atob(apiResp.content); // fallback: 纯ASCII
+      }
+      
+      var cloudData;
+      try { cloudData = JSON.parse(jsonStr); } catch(e) { throw new Error('JSON解析失败: ' + e.message); }
+      if (!cloudData || !cloudData.modules) {
+        if (isInit) { self.renderHeader(); self.renderModules(); self.updateDebugBar('local'); self.updateOnlineStatus('online'); }
+        return;
+      }
+
+      self.cloudSHA = apiResp.sha;
+
+      // 兼容旧格式
+      var modKeys = Object.keys(cloudData.modules);
+      for (var mi = 0; mi < modKeys.length; mi++) {
+        var cm = cloudData.modules[modKeys[mi]];
+        if (cm.kpiTarget !== undefined && (cm.trendTarget === null || cm.trendTarget === undefined)) cm.trendTarget = cm.kpiTarget;
+        if (cm.kpiUnit !== undefined && (cm.trendUnit === null || cm.trendUnit === undefined)) cm.trendUnit = cm.kpiUnit;
+        if (cm.inverted !== undefined && (cm.isLowerBetter === null || cm.isLowerBetter === undefined)) cm.isLowerBetter = cm.inverted;
+      }
+
+      // 时间戳比较：本地更新则保留本地
+      var cloudTime = cloudData.updatedAt ? new Date(cloudData.updatedAt).getTime() : 0;
+      var localTime = self.data.lastUpdate ? new Date(self.data.lastUpdate).getTime() : 0;
+      
+      if (isInit && localTime > cloudTime && localTime > 0) {
+        self.renderHeader();
+        self.renderModules();
+        self.updateDebugBar('local', '本地数据更新(' + new Date(localTime).toLocaleTimeString() + ')，已保留');
+        self.updateOnlineStatus('online');
+        self.saveLocal();
+        return;
+      }
+      
+      self.data.modules = initGrids(cloudData.modules);
+      self.data['work段'] = cloudData['work段'] || '';
+      self.data['班组'] = cloudData['班组'] || '';
+      self.data.lastUpdate = cloudData.updatedAt || new Date().toISOString();
+      self.data.confirmed = cloudData.confirmed || {};
+      self.renderHeader();
+      self.renderModules();
+      self.updateDebugBar('cloud');
+      self.saveLocal(true);
+      self.updateOnlineStatus('online', '\u25cf 云端协作(Gitee)');
+      if (!isInit) self.showToast('云端数据已同步');
+    })
+    .catch(function(e) {
+      var errMsg = e.message || '未知错误';
+      console.warn('拉取云端失败:', errMsg);
+      self.updateDebugBar('offline', errMsg);
+      self.cloudReachable = false;
+      self.updateOnlineStatus('offline', '离线模式（数据保存本地）');
+      if (isInit) { self.renderHeader(); self.renderModules(); }
+      if (!self.cloudRetryTimer) {
+        self.cloudRetryTimer = setTimeout(function() { self.checkCloudAndStart(); }, 10000);
+      }
+    });
+  },
+
+  // 推送数据到 Gitee
+  // force: 是否立即推送（跳过防抖，用于确认/页面关闭等场景）
+  pushToCloud(force) {
+    if (!this.cloudReachable) {
+      if (force) { console.warn('推送跳过: cloudReachable=false'); }
+      return;
+    }
+    var self = this;
+    self._pushRetryCount = self._pushRetryCount || 0;
+
+    var payload = {
+      updatedAt: new Date().toISOString(),
+      updatedBy: self.myName,
+      modules: self.data.modules,
+      'work段': self.data['work段'],
+      '班组': self.data['班组'],
+      confirmed: self.data.confirmed || {}
+    };
+    var jsonStr = JSON.stringify(payload);
+    var contentB64 = btoa(unescape(encodeURIComponent(jsonStr)));
+
+    // 先 GET 获取最新 SHA（冲突检测）
+    var getUrl = GITEE_API_CONTENT + '?access_token=' + GITEE_TOKEN + '&t=' + Date.now();
+    var fetchOpts = { cache: 'no-store' };
+    if (force) { fetchOpts.keepalive = true; }
+
+    fetch(getUrl, fetchOpts)
+    .then(function(r) {
+      if (!r.ok) throw new Error('GET:' + r.status);
+      return r.json();
+    })
+    .then(function(fileInfo) {
+      var putBody = {
+        access_token: GITEE_TOKEN,
+        content: contentB64,
+        sha: fileInfo.sha,
+        message: 'update by ' + self.myName,
+        branch: 'master'
+      };
+      var putOpts = {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(putBody)
+      };
+      if (force) { putOpts.keepalive = true; }
+      return fetch(GITEE_API_CONTENT, putOpts);
+    })
+    .then(function(r) {
+      if (r && r.ok) return r.json();
+      throw new Error('PUT:' + (r ? r.status : 'no response'));
+    })
+    .then(function(result) {
+      self._pushRetryCount = 0;
+      if (result && result.content && result.content.sha) {
+        self.cloudSHA = result.content.sha;
+      }
+      self.updateDebugBar('cloud', null);
+      if (!force) self.showToast('数据已同步到云端');
+    })
+    .catch(function(e) {
+      self._pushRetryCount++;
+      var errMsg = e.message || '未知错误';
+      console.warn('推送失败(' + self._pushRetryCount + '):', errMsg);
+      self.updateDebugBar('local', '推送失败:' + errMsg + ' (#' + self._pushRetryCount + ')');
+
+      var isNetErr = errMsg.indexOf('Failed to fetch') !== -1 ||
+                     errMsg.indexOf('NetworkError') !== -1 ||
+                     errMsg.indexOf('Load failed') !== -1;
+      if (isNetErr) {
+        if (self._pushRetryCount >= 3) {
+          self.cloudReachable = false;
+          self.updateOnlineStatus('offline', '推送失败，数据暂存本地');
+        }
+      }
+      if (self._pushRetryCount <= 5) {
+        var delay = Math.min(2000 * Math.pow(2, self._pushRetryCount - 1), 30000);
+        self._pushRetryTimer = setTimeout(function() { self.pushToCloud(false); }, delay);
+      }
+    });
+  },
+
+  saveLocal(skipPush) {
+    try {
+      localStorage.setItem(LS_KEY, JSON.stringify(this.data));
+      if (this.bc) this.bc.postMessage({
+        type: 'data-sync', from: this.myName, cloudSHA: this.cloudSHA,
+        modules: this.data.modules,
+        'work段': this.data['work段'], '班组': this.data['班组'],
+        lastUpdate: this.data.lastUpdate
+      });
+      if (!skipPush) {
+        clearTimeout(this._pushTimer);
+        this._pushTimer = setTimeout(() => this.pushToCloud(), 800);
+      }
+    } catch (e) {}
+  },
+
+  // 计算数据指纹：对所有模块的关键值做哈希，两台设备指纹相同 = 数据一致
+  computeFingerprint() {
+    var parts = [];
+    parts.push(this.data['work段'] || '');
+    parts.push(this.data['班组'] || '');
+    var mods = this.data.modules || {};
+    var keys = Object.keys(mods).sort();
+    for (var i = 0; i < keys.length; i++) {
+      var m = mods[keys[i]];
+      parts.push(keys[i] + '|' + (m.currentMonth||'') + '|' + (m.currentDay||'') + '|' + (m.confirmedAt||''));
+    }
+    var str = parts.join('::');
+    // 简单哈希（djb2）
+    var hash = 5381;
+    for (var j = 0; j < str.length; j++) {
+      hash = ((hash << 5) + hash + str.charCodeAt(j)) & 0xffffffff;
+    }
+    return (hash >>> 0).toString(16).padStart(8, '0').toUpperCase();
+  },
+
+  // 更新诊断面板
+  // source/errMsg 仅在显式传入时更新，避免 renderHeader() 无参调用时覆盖已有信息
+  updateDebugBar(source, errMsg) {
+    var fpEl = document.getElementById('debugFingerprint');
+    var shaEl = document.getElementById('debugCloudSHA');
+    var timeEl = document.getElementById('debugSyncTime');
+    var srcEl = document.getElementById('debugSource');
+    var errEl = document.getElementById('debugError');
+    var errItem = document.getElementById('debugErrorItem');
+    if (fpEl) fpEl.textContent = this.computeFingerprint();
+    if (shaEl) shaEl.textContent = this.cloudSHA ? this.cloudSHA.substring(0, 8) : '---';
+    if (timeEl) timeEl.textContent = new Date().toLocaleTimeString('zh-CN');
+    // 只有显式传了 source 参数才更新来源（undefined 表示不更新）
+    if (srcEl && source !== undefined) {
+      // 中文化来源标识
+      var srcLabel = source;
+      if (srcLabel === 'cloud') srcLabel = '云端';
+      else if (srcLabel === 'offline') srcLabel = '离线';
+      else if (srcLabel === 'local') srcLabel = '本地';
+      if (errMsg !== undefined && errMsg !== null && errMsg.indexOf('推送失败') !== -1) {
+        srcEl.textContent = '本地(推送未成功)';
+        srcEl.style.color = '#f87171';
+      } else if (source === 'offline') {
+        srcEl.textContent = '离线';
+        srcEl.style.color = '#f87171';
+      } else {
+        srcEl.textContent = srcLabel || (this.cloudReachable ? '等待中' : '离线');
+        srcEl.style.color = source === 'cloud' ? '#4ade80' : '';
+      }
+    }
+    // 只有显式传了 errMsg 参数才更新错误（undefined 表示不更新；null 表示清除）
+    if (errEl && errItem && errMsg !== undefined) {
+      if (errMsg) {
+        errEl.textContent = errMsg;
+        errItem.style.display = '';
+      } else {
+        errItem.style.display = 'none';
+      }
+    }
+  },
+
+  renderHeader() { this.renderHeaderMetaOnly(); this.updateLastUpdate(); this.updateDebugBar(); },
+
+  renderHeaderMetaOnly() {
+    const wd = document.getElementById('workDuan'), bz = document.getElementById('banZu');
+    const self = this;
+
+    function doSaveMeta(targetId) {
+      const inp = document.getElementById(targetId);
+      if (!inp) return;
+      const metaKey = targetId === 'workDuan' ? 'work段' : '班组';
+      const oldVal = self.data[metaKey];
+      const newVal = inp.value;
+      if (oldVal === newVal) { self.showMetaSaved(targetId); return; }
+      self.data[metaKey] = newVal;
+      self.emitEdit(null, 'meta', null, newVal, { metaKey: metaKey });
+      self.showMetaSaved(targetId);
+    }
+
+    if (!wd.dataset.bound) {
+      wd.dataset.bound = '1';
+      // 失焦时自动保存
+      wd.addEventListener('blur', function() { setTimeout(function() { doSaveMeta('workDuan'); }, 150); });
+      // Enter 键保存
+      wd.addEventListener('keydown', function(e) { if (e.key === 'Enter') { wd.blur(); doSaveMeta('workDuan'); } });
+      bz.addEventListener('blur', function() { setTimeout(function() { doSaveMeta('banZu'); }, 150); });
+      bz.addEventListener('keydown', function(e) { if (e.key === 'Enter') { bz.blur(); doSaveMeta('banZu'); } });
+
+      // 保存按钮事件
+      document.querySelectorAll('.meta-save-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          var tid = this.dataset.target;
+          var inp = document.getElementById(tid);
+          if (inp) inp.blur();
+          doSaveMeta(tid);
+        });
+      });
+    }
+    if (this.data['work段']) wd.value = this.data['work段'];
+    if (this.data['班组']) bz.value = this.data['班组'];
+  },
+
+  // 显示"已保存"提示
+  showMetaSaved(targetId) {
+    var hint = document.getElementById(targetId + 'Hint');
+    var btn = document.querySelector('.meta-save-btn[data-target="' + targetId + '"]');
+    if (hint) { hint.classList.add('show'); setTimeout(function() { hint.classList.remove('show'); }, 2000); }
+    if (btn) { btn.classList.add('saved'); btn.textContent = '✓ 已保存'; setTimeout(function() { btn.classList.remove('saved'); btn.textContent = '保存'; }, 2000); }
+  },
+
+  updateLastUpdate() {
+    const el = document.getElementById('lastUpdate');
+    if (this.data && this.data.lastUpdate)
+      el.textContent = '最后更新: ' + new Date(this.data.lastUpdate).toLocaleTimeString('zh-CN');
+  },
+
+  addUserAvatar(user) {
+    const c = document.getElementById('onlineUsers');
+    if (c.querySelector('[data-uid="' + user.id + '"]')) return;
+    const a = document.createElement('div');
+    a.className = 'user-avatar'; a.dataset.uid = user.id;
+    a.style.background = user.color;
+    a.textContent = (user.name || '?').charAt(0);
+    const t = document.createElement('span'); t.className = 'tooltip'; t.textContent = user.name;
+    a.appendChild(t); c.appendChild(a);
+  },
+
+  removeUserAvatar(id) {
+    const e = document.querySelector('[data-uid="' + id + '"]');
+    if (e) e.remove();
+    if (this.remoteCursors[id]) { this.remoteCursors[id].remove(); delete this.remoteCursors[id]; }
+  },
+
+  updateRemoteCursor(data) {
+    let c = this.remoteCursors[data.id];
+    if (!c) {
+      c = document.createElement('div'); c.className = 'remote-cursor';
+      c.innerHTML = '<div class="remote-cursor-label"></div><div class="remote-cursor-dot"></div>';
+      c.style.setProperty('--cursor-color', data.color);
+      document.body.appendChild(c);
+      this.remoteCursors[data.id] = c;
+    }
+    c.querySelector('.remote-cursor-label').textContent = data.name;
+    c.style.left = data.cursor.x + 'px'; c.style.top = data.cursor.y + 'px';
+  },
+
+  /* ===== Render ===== */
+  renderModules() {
+    var grid = document.getElementById('dashboardGrid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    var entries = Object.entries(this.data.modules);
+    for (var i = 0; i < entries.length; i++) {
+      var id = entries[i][0], mod = entries[i][1];
+      if (this.currentCategory !== 'all' && mod.category !== this.currentCategory) continue;
+      try {
+        grid.appendChild(this.createModuleCard(id, mod));
+      } catch(e) {
+        console.warn('Module ' + id + ' render failed:', e.message);
+        var errDiv = document.createElement('div');
+        errDiv.className = 'module-card';
+        errDiv.style.padding = '16px';
+        errDiv.style.color = '#ef4444';
+        errDiv.textContent = '模块「' + (mod.title || id) + '」渲染失败: ' + e.message;
+        grid.appendChild(errDiv);
+      }
+    }
+    requestAnimationFrame(function() { this.renderAllCharts(); }.bind(this));
+  },
+
+  createModuleCard(id, mod) {
+    const cc = CATEGORY_COLORS[mod.category] || CATEGORY_COLORS['安全'];
+    const card = document.createElement('div');
+    card.className = 'module-card'; card.id = 'mod-' + id;
+    card.style.setProperty('--cat-color', cc.color);
+    card.style.setProperty('--cat-color-light', cc.light);
+
+    const mKey = String(mod.currentMonth);
+    const isConfirmed = mod.confirmed && mod.confirmed[mKey];
+    if (isConfirmed) card.classList.add('confirmed');
+
+    // Header
+    const h = document.createElement('div'); h.className = 'module-header';
+    h.innerHTML = '<span class="module-icon">' + (ICONS[mod.icon] || '📊') + '</span>';
+    const titleInput = document.createElement('input'); titleInput.className = 'module-title';
+    titleInput.type = 'text'; titleInput.value = mod.title;
+    titleInput.addEventListener('input', () => { mod.title = titleInput.value; this.saveLocal(); });
+    titleInput.addEventListener('blur', () => { this.pushToCloud(); });
+    h.appendChild(titleInput);
+    const badge = document.createElement('span'); badge.className = 'module-badge';
+    badge.textContent = mod.category; h.appendChild(badge);
+
+    // Month selector
+    const mp = document.createElement('div'); mp.className = 'month-picker';
+    const sel = document.createElement('select');
+    MONTH_OPTIONS.forEach(opt => {
+      const o = document.createElement('option');
+      o.value = opt.value; o.textContent = opt.label;
+      if (opt.value === mod.currentMonth) o.selected = true;
+      sel.appendChild(o);
+    });
+    sel.addEventListener('change', () => {
+      mod.currentMonth = parseInt(sel.value);
+      const mk = String(mod.currentMonth);
+      if (!mod.gridData) mod.gridData = {};
+      if (!mod.gridData[mk]) mod.gridData[mk] = {};
+      this.emitEdit(id, 'month', null, mod.currentMonth);
+      this.renderModules();
+    });
+    mp.appendChild(sel);
+    h.appendChild(mp);
+    card.appendChild(h);
+
+    // Confirm bar
+    const cb = document.createElement('div'); cb.className = 'confirm-bar';
+    const confirmBtn = document.createElement('button');
+    confirmBtn.className = 'btn-confirm';
+    confirmBtn.innerHTML = '✓ 确认数据';
+    confirmBtn.title = '确认提交当前数据';
+    confirmBtn.addEventListener('click', () => this.confirmModule(id, mod));
+    cb.appendChild(confirmBtn);
+    const status = document.createElement('span');
+    status.className = 'confirm-status' + (isConfirmed ? ' ok' : '');
+    if (isConfirmed) {
+      status.textContent = '上次确认：' + (mod.confirmed[mKey].by || '未知') + ' ' + new Date(mod.confirmed[mKey].at).toLocaleString('zh-CN') + ' | 修改数据后可重新确认';
+    } else {
+      status.textContent = '数据填写完成后点击确认，确认后仍可修改并重新确认';
+    }
+    cb.appendChild(status);
+    card.appendChild(cb);
+
+    // Calendar — 仅无 people 数据的模块显示日期网格
+    if (!mod.people || mod.people.length === 0) {
+      const cal = document.createElement('div'); cal.className = 'calendar-section';
+      cal.appendChild(this.createCalendarGrid(id, mod));
+      card.appendChild(cal);
+    }
+
+    // KPI Threshold Editor — 仅无 people 数据的模块显示目标阈值编辑器
+    if (!mod.people || mod.people.length === 0) {
+      card.appendChild(this.createTargetEditor(id, mod));
+    }
+
+    // People table — 有 people 数据的模块以表格为主展示区
+    if (mod.people && mod.people.length >= 0 && !mod.multiskill) {
+      const ps = document.createElement('div'); ps.className = 'people-section';
+      const pst = document.createElement('div'); pst.className = 'people-section-title';
+      pst.innerHTML = '<span>人员提案统计表</span><span class="people-section-hint">（纵向：人员姓名，横向：第1~4周提案数量）</span>';
+      ps.appendChild(pst);
+      ps.appendChild(this.createPeopleTable(id, mod));
+      const pa = document.createElement('div'); pa.className = 'people-actions';
+      const addBtn = document.createElement('button');
+      addBtn.className = 'btn-add-row'; addBtn.textContent = '＋ 添加人员';
+      addBtn.addEventListener('click', () => {
+        mod.people.push({ name: '', w1:'', w2:'', w3:'', w4:'' });
+        this.emitEdit(id, 'people-add', null, '', { rowIndex: mod.people.length - 1 });
+        this.renderModules();
+      });
+      pa.appendChild(addBtn);
+      ps.appendChild(pa);
+      card.appendChild(ps);
+    }
+
+    // Multiskill table — 多能工比例的专用表格
+    if (mod.people && mod.multiskill) {
+      const ps = document.createElement('div'); ps.className = 'people-section';
+      const pst = document.createElement('div'); pst.className = 'people-section-title';
+      pst.innerHTML = '<span>多能工技能矩阵</span><span class="people-section-hint">（0=不会, 0.25~1=技能等级，点击下拉选择）</span>';
+      ps.appendChild(pst);
+      ps.appendChild(this.createMultiskillTable(id, mod));
+      const pa = document.createElement('div'); pa.className = 'people-actions';
+      const addBtn = document.createElement('button');
+      addBtn.className = 'btn-add-row'; addBtn.textContent = '＋ 添加人员';
+      addBtn.addEventListener('click', () => {
+        mod.people.push({ name: '', fangbo:'', fenjian:'', choujian:'', baozhuang:'' });
+        this.emitEdit(id, 'people-add', null, '', { rowIndex: mod.people.length - 1 });
+        this.renderModules();
+      });
+      pa.appendChild(addBtn);
+      ps.appendChild(pa);
+      card.appendChild(ps);
+      // 汇总：各工序达标人数及比例
+      card.appendChild(this.createMultiskillSummary(id, mod));
+    }
+
+    // Trend chart
+    const ts = document.createElement('div'); ts.className = 'trend-section';
+    const tw = document.createElement('div'); tw.className = 'trend-title-wrap';
+    const tti = document.createElement('input');
+    tti.type = 'text'; tti.className = 'trend-title';
+    tti.value = mod.trendTitle || '趋势图';
+    tti.placeholder = '趋势图标题';
+    const tts = document.createElement('span'); tts.className = 'trend-title-save'; tts.textContent = '✓ 已保存';
+    const showTrendSaved = function() { tts.classList.add('show'); setTimeout(function() { tts.classList.remove('show'); }, 2000); };
+    tti.addEventListener('blur', () => {
+      var oldVal = this.data.modules[id].trendTitle || '趋势图';
+      if (tti.value !== oldVal) {
+        this.data.modules[id].trendTitle = tti.value;
+        this.emitEdit(id, 'trendTitle', null, tti.value);
+        showTrendSaved();
+      }
+    });
+    tti.addEventListener('keydown', function(e) { if (e.key === 'Enter') { tti.blur(); } });
+    tw.appendChild(tti); tw.appendChild(tts);
+    ts.appendChild(tw);
+    const ccDiv = document.createElement('div'); ccDiv.className = 'chart-container';
+    const canvas = document.createElement('canvas'); canvas.id = 'chart-' + id;
+    ccDiv.appendChild(canvas);
+    ts.appendChild(ccDiv);
+    card.appendChild(ts);
+
+    // Problem section
+    const prob = document.createElement('div'); prob.className = 'problem-section';
+    const pl = document.createElement('div'); pl.className = 'problem-label'; pl.textContent = '问题说明：';
+    const pi = document.createElement('textarea');
+    pi.className = 'problem-input'; pi.placeholder = '输入问题说明...';
+    pi.value = mod.problem || '';
+    const pSave = document.createElement('span'); pSave.className = 'trend-title-save'; pSave.textContent = '✓ 已保存';
+    pSave.style.marginLeft = '6px';
+    var probTimer = null;
+    var showProbSaved = function() { pSave.classList.add('show'); setTimeout(function() { pSave.classList.remove('show'); }, 2000); };
+    pi.addEventListener('input', () => {
+      this.data.modules[id].problem = pi.value;
+      this.emitEdit(id, 'problem', null, pi.value);
+      if (probTimer) clearTimeout(probTimer);
+      probTimer = setTimeout(showProbSaved, 1500);
+    });
+    pl.appendChild(pSave);
+    prob.appendChild(pl); prob.appendChild(pi); card.appendChild(prob);
+
+    return card;
+  },
+
+  confirmModule(id, mod) {
+    const mKey = String(mod.currentMonth);
+    const grid = JSON.parse(JSON.stringify(getGrid(mod)));
+    const snapshot = {
+      grid: grid,
+      problem: mod.problem || '',
+      trendTarget: mod.trendTarget,
+      kpiGreenMin: mod.kpiGreenMin, kpiGreenMax: mod.kpiGreenMax,
+      kpiYellowMin: mod.kpiYellowMin, kpiYellowMax: mod.kpiYellowMax,
+      people: mod.people ? JSON.parse(JSON.stringify(mod.people)) : null
+    };
+    const wasConfirmed = !!mod.confirmed[mKey];
+    if (!mod.confirmed) mod.confirmed = {};
+    mod.confirmed[mKey] = {
+      by: this.myName,
+      at: new Date().toISOString(),
+      data: snapshot
+    };
+    this.saveLocal();
+    // 确认操作立即推送到云端，确保数据不丢失
+    clearTimeout(this._pushTimer);
+    this.pushToCloud(true);
+    this.showToast(mod.title + ' ' + mod.currentMonth + '月数据' + (wasConfirmed ? '已更新确认' : '已确认提交'));
+    this.renderModules();
+    // 按钮先显示"更新数据"(金色)，5秒后恢复蓝色"确认数据"
+    var btn = document.querySelector('#mod-' + id + ' .btn-confirm');
+    if (btn) {
+      btn.classList.add('confirmed');
+      btn.innerHTML = '更新数据';
+      clearTimeout(btn._resetTimer);
+      btn._resetTimer = setTimeout(function() {
+        btn.classList.remove('confirmed');
+        btn.innerHTML = '✓ 确认数据';
+      }, 5000);
+    }
+  },
+
+  showToast(msg) {
+    const t = document.createElement('div');
+    t.className = 'confirm-toast'; t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .3s'; }, 2500);
+    setTimeout(() => t.remove(), 3000);
+  },
+
+  createCalendarGrid(mid, mod) {
+    const g = document.createElement('div'); g.className = 'calendar-grid';
+    WEEK_HEADERS.forEach(d => {
+      const h = document.createElement('div'); h.className = 'cal-day-header'; h.textContent = d; g.appendChild(h);
+    });
+    const max = mod.isMonthly ? 12 : 31;
+    const grid = getGrid(mod);
+    const now = new Date();
+    const firstDay = new Date(this.data.year || now.getFullYear(), mod.currentMonth - 1, 1).getDay();
+    for (let i = 0; i < firstDay; i++) {
+      const e = document.createElement('div'); e.className = 'cal-cell'; e.style.visibility = 'hidden'; g.appendChild(e);
+    }
+    for (let d = 1; d <= max; d++) {
+      const cell = document.createElement('div'); cell.className = 'cal-cell';
+      cell.dataset.module = mid; cell.dataset.day = d;
+      const dn = document.createElement('span'); dn.className = 'cal-day-num'; dn.textContent = d; cell.appendChild(dn);
+      const inp = document.createElement('input');
+      inp.className = 'cal-input'; inp.type = 'text';
+      inp.value = grid[String(d)] || '';
+      inp.dataset.module = mid; inp.dataset.day = d;
+      this.applyKpiColor(cell, inp.value, mod);
+      inp.addEventListener('input', () => {
+        getGrid(mod)[String(d)] = inp.value;
+        this.applyKpiColor(cell, inp.value, mod);
+        this.emitEdit(mid, 'grid', String(d), inp.value);
+      });
+      inp.addEventListener('focus', () => cell.classList.add('editing'));
+      inp.addEventListener('blur', () => cell.classList.remove('editing'));
+      cell.appendChild(inp); g.appendChild(cell);
+    }
+    return g;
+  },
+
+  applyKpiColor(cell, value, mod) {
+    cell.classList.remove('kpi-green', 'kpi-yellow', 'kpi-red');
+    if (!value || value === '') return;
+    const n = parseFloat(value); if (isNaN(n)) return;
+    const isLower = mod.isLowerBetter;
+    if (isLower) {
+      if (mod.kpiGreenMax != null && n <= mod.kpiGreenMax) cell.classList.add('kpi-green');
+      else if (mod.kpiYellowMax != null && n <= mod.kpiYellowMax) cell.classList.add('kpi-yellow');
+      else cell.classList.add('kpi-red');
+    } else {
+      if (mod.kpiGreenMin != null && n >= mod.kpiGreenMin) cell.classList.add('kpi-green');
+      else if (mod.kpiYellowMin != null && n >= mod.kpiYellowMin) cell.classList.add('kpi-yellow');
+      else cell.classList.add('kpi-red');
+    }
+  },
+
+  createTargetEditor(mid, mod) {
+    const te = document.createElement('div'); te.className = 'target-editor';
+    const tg = document.createElement('div'); tg.className = 'te-group';
+    tg.innerHTML = '<span class="te-label">目标值：</span>';
+    const ti = document.createElement('input'); ti.className = 'target-input'; ti.type = 'number';
+    ti.value = mod.trendTarget; ti.step = mod.trendTarget < 1 ? '0.01' : '1';
+    ti.addEventListener('input', () => {
+      mod.trendTarget = parseFloat(ti.value) || 0;
+      this.emitEdit(mid, 'threshold', null, mod.trendTarget, { threshold: 'trendTarget' });
+      clearTimeout(this.editTimers[mid]);
+      this.editTimers[mid] = setTimeout(() => this.renderChart(mid, mod), 400);
+    });
+    tg.appendChild(ti);
+    const unitSpan = document.createElement('span'); unitSpan.className = 'te-unit';
+    unitSpan.textContent = mod.trendUnit || ''; tg.appendChild(unitSpan);
+    te.appendChild(tg);
+    const sep = document.createElement('span'); sep.style.color = '#cbd5e1'; sep.textContent = '|'; te.appendChild(sep);
+
+    const grp = document.createElement('div'); grp.className = 'te-group';
+    grp.innerHTML = '<span class="te-status-dot green"></span>';
+    const gLabel = document.createElement('span'); gLabel.className = 'te-label';
+    gLabel.textContent = mod.isLowerBetter ? '≤' : '≥'; grp.appendChild(gLabel);
+    const gi = document.createElement('input'); gi.type = 'number';
+    gi.value = mod.isLowerBetter ? (mod.kpiGreenMax != null ? mod.kpiGreenMax : '') : (mod.kpiGreenMin != null ? mod.kpiGreenMin : '');
+    gi.step = mod.trendTarget < 1 ? '0.01' : '1'; gi.placeholder = '阈值';
+    gi.addEventListener('input', () => {
+      const v = gi.value === '' ? null : parseFloat(gi.value);
+      if (mod.isLowerBetter) mod.kpiGreenMax = v; else mod.kpiGreenMin = v;
+      this.emitEdit(mid, 'threshold', null, v, { threshold: 'kpiGreen' });
+      this.refreshKpiColors(mid, mod);
+    });
+    grp.appendChild(gi); te.appendChild(grp);
+
+    const yrp = document.createElement('div'); yrp.className = 'te-group';
+    yrp.innerHTML = '<span class="te-status-dot yellow"></span>';
+    const yLabel = document.createElement('span'); yLabel.className = 'te-label';
+    yLabel.textContent = mod.isLowerBetter ? '≤' : '≥'; yrp.appendChild(yLabel);
+    const yi = document.createElement('input'); yi.type = 'number';
+    yi.value = mod.isLowerBetter ? (mod.kpiYellowMax != null ? mod.kpiYellowMax : '') : (mod.kpiYellowMin != null ? mod.kpiYellowMin : '');
+    yi.step = mod.trendTarget < 1 ? '0.01' : '1'; yi.placeholder = '阈值';
+    yi.addEventListener('input', () => {
+      const v = yi.value === '' ? null : parseFloat(yi.value);
+      if (mod.isLowerBetter) mod.kpiYellowMax = v; else mod.kpiYellowMin = v;
+      this.emitEdit(mid, 'threshold', null, v, { threshold: 'kpiYellow' });
+      this.refreshKpiColors(mid, mod);
+    });
+    yrp.appendChild(yi); te.appendChild(yrp);
+    const unitSpan2 = document.createElement('span'); unitSpan2.className = 'te-unit';
+    unitSpan2.style.marginLeft = '4px'; unitSpan2.textContent = '(' + (mod.trendUnit || '') + ')';
+    te.appendChild(unitSpan2);
+    return te;
+  },
+
+  refreshKpiColors(mid, mod) {
+    document.querySelectorAll('.cal-cell[data-module="' + mid + '"]').forEach(cell => {
+      const inp = cell.querySelector('.cal-input');
+      if (inp) this.applyKpiColor(cell, inp.value, mod);
+    });
+  },
+
+  createPeopleTable(mid, mod) {
+    const w = document.createElement('div'); w.style.overflowX = 'auto';
+    const t = document.createElement('table'); t.className = 'people-table';
+    t.innerHTML = '<thead><tr><th>姓名</th><th>第一周</th><th>第二周</th><th>第三周</th><th>第四周</th><th></th></tr></thead>';
+    const b = document.createElement('tbody');
+    mod.people.forEach((p, i) => {
+      const r = document.createElement('tr');
+      // Editable name cell
+      const nTd = document.createElement('td');
+      const nInp = document.createElement('input');
+      nInp.className = 'name-input'; nInp.type = 'text'; nInp.value = p.name || '';
+      nInp.placeholder = '姓名';
+      nInp.addEventListener('input', () => {
+        this.data.modules[mid].people[i].name = nInp.value;
+        this.emitEdit(mid, 'people', null, nInp.value, { rowIndex: i, col: 'name' });
+      });
+      nTd.appendChild(nInp); r.appendChild(nTd);
+      ['w1', 'w2', 'w3', 'w4'].forEach(c => {
+        const td = document.createElement('td');
+        const inp = document.createElement('input');
+        inp.className = 'people-input'; inp.type = 'number';
+        inp.value = p[c] || '';
+        inp.addEventListener('input', () => {
+          this.data.modules[mid].people[i][c] = inp.value;
+          this.emitEdit(mid, 'people', null, inp.value, { rowIndex: i, col: c });
+        });
+        td.appendChild(inp); r.appendChild(td);
+      });
+      // Delete button
+      const delTd = document.createElement('td');
+      const delBtn = document.createElement('button');
+      delBtn.className = 'btn-del-row'; delBtn.innerHTML = '✕'; delBtn.title = '删除此行';
+      delBtn.addEventListener('click', () => {
+        this.data.modules[mid].people.splice(i, 1);
+        this.emitEdit(mid, 'people-delete', null, '', { rowIndex: i });
+        this.renderModules();
+      });
+      delTd.appendChild(delBtn); r.appendChild(delTd);
+      b.appendChild(r);
+    });
+    // 汇总行
+    var totals = { w1: 0, w2: 0, w3: 0, w4: 0 };
+    mod.people.forEach(function(p) {
+      totals.w1 += Number(p.w1) || 0;
+      totals.w2 += Number(p.w2) || 0;
+      totals.w3 += Number(p.w3) || 0;
+      totals.w4 += Number(p.w4) || 0;
+    });
+    var sumRow = document.createElement('tr');
+    sumRow.className = 'people-sum-row';
+    var sumLabel = document.createElement('td');
+    sumLabel.innerHTML = '<strong>合计</strong>';
+    sumRow.appendChild(sumLabel);
+    ['w1','w2','w3','w4'].forEach(function(c) {
+      var td = document.createElement('td');
+      td.innerHTML = '<strong>' + totals[c] + '</strong>';
+      sumRow.appendChild(td);
+    });
+    var emptyTd = document.createElement('td'); sumRow.appendChild(emptyTd);
+    b.appendChild(sumRow);
+    t.appendChild(b); w.appendChild(t); return w;
+  },
+
+  // 多能工技能矩阵表格 — 下拉选择 0/0.25/0.5/0.75/1，配合可视化圆圈
+  createMultiskillTable(mid, mod) {
+    var self = this;
+    var levels = ['0','0.25','0.5','0.75','1'];
+    var headers = ['方波筛选', '分拣', '抽检', '包装'];
+    var fields = ['fangbo', 'fenjian', 'choujian', 'baozhuang'];
+    var w = document.createElement('div'); w.style.overflowX = 'auto';
+    var t = document.createElement('table'); t.className = 'people-table';
+    var thead = '<thead><tr><th>姓名</th>';
+    headers.forEach(function(h) { thead += '<th>' + h + '</th>'; });
+    thead += '<th></th></tr></thead>';
+    t.innerHTML = thead;
+    var b = document.createElement('tbody');
+    mod.people.forEach(function(p, i) {
+      var r = document.createElement('tr');
+      // Editable name cell
+      var nTd = document.createElement('td');
+      var nInp = document.createElement('input');
+      nInp.className = 'skill-name-input'; nInp.type = 'text'; nInp.value = p.name || '';
+      nInp.placeholder = '姓名';
+      nInp.addEventListener('input', function() {
+        self.data.modules[mid].people[i].name = nInp.value;
+        self.emitEdit(mid, 'people', null, nInp.value, { rowIndex: i, col: 'name' });
+      });
+      nTd.appendChild(nInp); r.appendChild(nTd);
+
+      // Skill cells with dropdown + circle
+      fields.forEach(function(f) {
+        var td = document.createElement('td');
+        var cell = document.createElement('div');
+        cell.className = 'skill-cell';
+
+        // SVG circle visualization
+        var circ = document.createElement('span');
+        circ.className = 'skill-circle';
+        var val = parseFloat(p[f]) || 0;
+        circ.innerHTML = self.makeSkillCircle(val);
+        cell.appendChild(circ);
+
+        // Dropdown select
+        var sel = document.createElement('select');
+        sel.className = 'skill-select';
+        levels.forEach(function(lv) {
+          var opt = document.createElement('option');
+          opt.value = lv; opt.textContent = lv;
+          if (String(p[f]) === lv) opt.selected = true;
+          sel.appendChild(opt);
+        });
+        sel.addEventListener('change', function() {
+          self.data.modules[mid].people[i][f] = sel.value;
+          circ.innerHTML = self.makeSkillCircle(parseFloat(sel.value));
+          self.emitEdit(mid, 'people', null, sel.value, { rowIndex: i, col: f });
+          // 刷新汇总
+          var oldSum = document.getElementById('ms-summary-' + mid);
+          if (oldSum) {
+            var parent = oldSum.parentNode;
+            var newSum = self.createMultiskillSummary(mid, mod);
+            parent.replaceChild(newSum, oldSum);
+          }
+          self.renderAllCharts();
+        });
+        cell.appendChild(sel);
+        td.appendChild(cell); r.appendChild(td);
+      });
+
+      // Delete button
+      var delTd = document.createElement('td');
+      var delBtn = document.createElement('button');
+      delBtn.className = 'btn-del-row'; delBtn.innerHTML = '✕'; delBtn.title = '删除此行';
+      delBtn.addEventListener('click', function() {
+        self.data.modules[mid].people.splice(i, 1);
+        self.emitEdit(mid, 'people-delete', null, '', { rowIndex: i });
+        self.renderModules();
+      });
+      delTd.appendChild(delBtn); r.appendChild(delTd);
+      b.appendChild(r);
+    });
+    t.appendChild(b); w.appendChild(t); return w;
+  },
+
+  // SVG 圆圈：0=空, 0.25=1/4, 0.5=半圆, 0.75=3/4, 1=满圆
+  makeSkillCircle(val) {
+    val = parseFloat(val) || 0;
+    if (val <= 0) {
+      return '<svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="none" stroke="#cbd5e1" stroke-width="2"/></svg>';
+    }
+    if (val >= 1) {
+      return '<svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="#22c55e" stroke="#16a34a" stroke-width="1.5"/></svg>';
+    }
+    // 部分填充用 pie 切片 — 用 conic gradient 近似（SVG path 弧形）
+    var angle = val * 360;
+    var rad = (angle - 90) * Math.PI / 180;
+    var x = 10 + 8 * Math.cos(rad);
+    var y = 10 + 8 * Math.sin(rad);
+    var largeArc = angle > 180 ? 1 : 0;
+    var path = 'M 10 10 L 10 2 A 8 8 0 ' + largeArc + ' 1 ' + x + ' ' + y + ' Z';
+    return '<svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="none" stroke="#cbd5e1" stroke-width="2"/><path d="' + path + '" fill="#f59e0b" opacity="0.8"/></svg>';
+  },
+
+  // 多能工汇总：各工序达标(值为1)人数及占比
+  createMultiskillSummary(mid, mod) {
+    var self = this;
+    var skills = [
+      { label: '方波筛选', field: 'fangbo' },
+      { label: '分拣', field: 'fenjian' },
+      { label: '抽检', field: 'choujian' },
+      { label: '包装', field: 'baozhuang' }
+    ];
+    var total = mod.people.length;
+    var div = document.createElement('div');
+    div.className = 'multiskill-summary';
+    div.id = 'ms-summary-' + mid;
+
+    var tbl = document.createElement('table');
+    tbl.innerHTML = '<thead><tr><th>工序</th><th>达标人数（技能=1）</th><th>占总人数比例</th></tr></thead>';
+    var tb = document.createElement('tbody');
+    skills.forEach(function(sk) {
+      var count = 0;
+      mod.people.forEach(function(p) {
+        if (parseFloat(p[sk.field]) >= 1) count++;
+      });
+      var ratio = total > 0 ? (count / total * 100).toFixed(1) : '0.0';
+      var colorClass = ratio >= 60 ? 'green' : (ratio >= 30 ? 'yellow' : 'red');
+
+      var tr = document.createElement('tr');
+      tr.innerHTML = '<td><strong>' + sk.label + '</strong></td>' +
+        '<td><span class="summary-val ' + colorClass + '">' + count + ' 人</span></td>' +
+        '<td><span class="summary-val ' + colorClass + '">' + ratio + '%</span></td>';
+      tb.appendChild(tr);
+    });
+    tbl.appendChild(tb);
+    div.appendChild(tbl);
+    return div;
+  },
+
+  renderAllCharts() {
+    if (!this.data || !this.data.modules) return;
+    if (typeof Chart === 'undefined') {
+      var sm = document.getElementById('statusMsg');
+      if (sm) sm.textContent = '图表库加载失败，请检查网络连接后刷新页面';
+      return;
+    }
+    var entries = Object.entries(this.data.modules);
+    for (var i = 0; i < entries.length; i++) {
+      try { this.renderChart(entries[i][0], entries[i][1]); }
+      catch(e) { console.warn('Chart render failed for ' + entries[i][0] + ':', e.message); }
+    }
+  },
+
+  renderChart(id, mod) {
+    if (typeof Chart === 'undefined') return;
+    var cv = document.getElementById('chart-' + id);
+    if (!cv) return;
+    if (this.charts[id]) this.charts[id].destroy();
+    const max = mod.isMonthly ? 12 : 31;
+
+    // 多能工模块：柱状图显示各工序达标人数 + 比例目标线
+    if (mod.people && mod.people.length > 0 && mod.multiskill) {
+      var skills = [
+        { label: '方波筛选', field: 'fangbo' },
+        { label: '分拣', field: 'fenjian' },
+        { label: '抽检', field: 'choujian' },
+        { label: '包装', field: 'baozhuang' }
+      ];
+      var skLabels = [], skValues = [], skRatios = [];
+      var total = mod.people.length;
+      skills.forEach(function(sk) {
+        skLabels.push(sk.label);
+        var count = 0;
+        mod.people.forEach(function(p) {
+          if (parseFloat(p[sk.field]) >= 1) count++;
+        });
+        skValues.push(count);
+        skRatios.push(total > 0 ? (count / total * 100) : 0);
+      });
+      var targetRatio = (mod.trendTarget || 0.6) * 100;
+      var targetLine = new Array(4).fill(targetRatio);
+      var barColors = skRatios.map(function(r) {
+        return r >= 60 ? '#22c55e' : (r >= 30 ? '#f59e0b' : '#ef4444');
+      });
+      this.charts[id] = new Chart(cv.getContext('2d'), {
+        type: 'bar',
+        data: { labels: skLabels, datasets: [
+          { label: '目标比例(' + targetRatio.toFixed(0) + '%)', data: targetLine, borderColor: '#f59e0b', borderDash: [6,4], borderWidth: 2, backgroundColor: 'transparent', type: 'line', fill: false, pointRadius: 4, pointBackgroundColor: '#f59e0b' },
+          { label: '达标人数', data: skValues, backgroundColor: barColors, borderColor: barColors.map(function(c){return c;}), borderWidth: 1, borderRadius: 4 }
+        ]},
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: true, position: 'top', labels: { boxWidth: 12, font: { size: 10 }, usePointStyle: true } },
+            tooltip: { callbacks: { label: function(it) {
+              if (it.dataset.label.indexOf('%') > -1) return it.dataset.label + ': ' + it.raw + '%';
+              return it.dataset.label + ': ' + it.raw + ' 人 / ' + total + ' 人 (' + skRatios[it.dataIndex].toFixed(1) + '%)';
+            } } }
+          },
+          scales: {
+            x: { ticks: { font: { size: 10 } }, grid: { display: false } },
+            y: { ticks: { font: { size: 9 } }, grid: { color: '#e2e8f0' }, beginAtZero: true, title: { display: true, text: '人数' } }
+          }
+        }
+      });
+      return;
+    }
+
+    // 有 people 数据的模块：柱状图，按周汇总
+    if (mod.people && mod.people.length > 0) {
+      var wLabels = ['第1周','第2周','第3周','第4周'];
+      var wValues = [0, 0, 0, 0];
+      mod.people.forEach(function(p) {
+        wValues[0] += Number(p.w1) || 0;
+        wValues[1] += Number(p.w2) || 0;
+        wValues[2] += Number(p.w3) || 0;
+        wValues[3] += Number(p.w4) || 0;
+      });
+      var wTarget = new Array(4).fill(mod.trendTarget);
+      var barColors = wValues.map(function(v) {
+        if (v >= mod.trendTarget) return '#22c55e';
+        if (v >= (mod.kpiYellowMin || mod.trendTarget * 0.75)) return '#f59e0b';
+        return '#ef4444';
+      });
+      this.charts[id] = new Chart(cv.getContext('2d'), {
+        type: 'bar',
+        data: { labels: wLabels, datasets: [
+          { label: '目标(' + (mod.trendUnit || '件') + ')', data: wTarget, borderColor: '#f59e0b', borderDash: [6,4], borderWidth: 2, backgroundColor: 'transparent', type: 'line', fill: false, pointRadius: 0 },
+          { label: '实际提案数', data: wValues, backgroundColor: barColors, borderColor: barColors.map(function(c){return c;}), borderWidth: 1, borderRadius: 4 }
+        ]},
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: true, position: 'top', labels: { boxWidth: 12, font: { size: 10 }, usePointStyle: true } },
+            tooltip: { callbacks: { label: function(it) { return it.dataset.label + ': ' + it.raw + ' ' + (mod.trendUnit || '件'); } } }
+          },
+          scales: {
+            x: { ticks: { font: { size: 10 } }, grid: { display: false } },
+            y: { ticks: { font: { size: 9 } }, grid: { color: '#e2e8f0' }, beginAtZero: true }
+          }
+        }
+      });
+      return;
+    }
+
+    // 普通模块：折线图
+    const grid = getGrid(mod);
+    const labels = [], values = [];
+    for (let d = 1; d <= max; d++) {
+      const v = grid[String(d)];
+      labels.push(d); values.push(v ? parseFloat(v) : null);
+    }
+    const target = new Array(max).fill(mod.trendTarget);
+    this.charts[id] = new Chart(cv.getContext('2d'), {
+      type: 'line',
+      data: { labels, datasets: [
+        { label: '目标', data: target, borderColor: '#f59e0b', borderDash: [6, 4], borderWidth: 2, fill: false, pointRadius: 0 },
+        { label: '实际', data: values, borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.12)', borderWidth: 2.5, fill: true, tension: 0.3, pointRadius: 2.5, pointHoverRadius: 5, pointBackgroundColor: '#2563eb' }
+      ]},
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: true, position: 'top', labels: { boxWidth: 12, font: { size: 10 }, usePointStyle: true } },
+          tooltip: { callbacks: { title: function(it) { return (mod.isMonthly ? '月' : '日') + ' ' + it[0].label; }, label: function(it) { return it.dataset.label + ': ' + (it.raw != null ? it.raw : '无数据') + ' ' + (mod.trendUnit || ''); } } }
+        },
+        scales: {
+          x: { ticks: { font: { size: 8 }, maxTicksLimit: 8 }, grid: { display: false } },
+          y: { ticks: { font: { size: 8 } }, grid: { color: '#e2e8f0' } }
+        }
+      }
+    });
+  },
+
+  /* ===== Communication ===== */
+  emitEdit(mid, field, key, value, extra) {
+    extra = extra || {};
+    const payload = { moduleId: mid, field, key, value, ...extra };
+    if (this.socket && this.socket.connected) this.socket.emit('cell-edit', payload);
+    this.data.lastUpdate = new Date().toISOString();
+    this.updateLastUpdate();
+    this.saveLocal();
+    if (mid && this.data.modules[mid]) {
+      clearTimeout(this.editTimers[mid]);
+      this.editTimers[mid] = setTimeout(() => this.renderChart(mid, this.data.modules[mid]), 400);
+    }
+  },
+
+  handleRemoteUpdate(payload) {
+    if (!this.data) return;
+    if (payload.field === 'meta') {
+      this.data[payload.metaKey] = payload.value;
+      if (payload.metaKey === 'work段') document.getElementById('workDuan').value = payload.value;
+      if (payload.metaKey === '班组') document.getElementById('banZu').value = payload.value;
+      this.data.lastUpdate = new Date().toISOString();
+      this.updateLastUpdate();
+      return;
+    }
+    if (payload.field === 'month' && payload.moduleId && this.data.modules[payload.moduleId]) {
+      this.data.modules[payload.moduleId].currentMonth = payload.value;
+      this.renderModules();
+      return;
+    }
+    if (!payload.moduleId || !this.data.modules[payload.moduleId]) return;
+    const mod = this.data.modules[payload.moduleId];
+    if (payload.field === 'grid' && payload.key) {
+      getGrid(mod)[payload.key] = payload.value;
+      const inp = document.querySelector('input[data-module="' + payload.moduleId + '"][data-day="' + payload.key + '"]');
+      if (inp && document.activeElement !== inp) {
+        inp.value = payload.value;
+        this.applyKpiColor(inp.parentElement, payload.value, mod);
+      }
+      clearTimeout(this.editTimers[payload.moduleId]);
+      this.editTimers[payload.moduleId] = setTimeout(() => this.renderChart(payload.moduleId, mod), 300);
+    } else if (payload.field === 'problem') {
+      mod.problem = payload.value;
+      const ta = document.querySelector('#mod-' + payload.moduleId + ' .problem-input');
+      if (ta && document.activeElement !== ta) ta.value = payload.value;
+    } else if (payload.field === 'people' && mod.people && mod.people[payload.rowIndex]) {
+      mod.people[payload.rowIndex][payload.col] = payload.value;
+      if (payload.col === 'name') {
+        const nInp = document.querySelector('#mod-' + payload.moduleId + ' .name-input[data-row="' + payload.rowIndex + '"]');
+        // Re-render to update name display
+        clearTimeout(this.editTimers[payload.moduleId]);
+        this.editTimers[payload.moduleId] = setTimeout(() => this.renderModules(), 500);
+      }
+    } else if (payload.field === 'people-add') {
+      if (!mod.people) mod.people = [];
+      if (mod.multiskill) {
+        mod.people.push({ name: '', fangbo:'', fenjian:'', choujian:'', baozhuang:'' });
+      } else {
+        mod.people.push({ name: '', w1:'', w2:'', w3:'', w4:'' });
+      }
+      this.renderModules();
+    } else if (payload.field === 'people-delete') {
+      if (mod.people) mod.people.splice(payload.rowIndex, 1);
+      this.renderModules();
+    } else if (payload.field === 'threshold') {
+      if (payload.threshold === 'trendTarget') mod.trendTarget = payload.value;
+      else if (payload.threshold === 'kpiGreen') {
+        if (mod.isLowerBetter) mod.kpiGreenMax = payload.value; else mod.kpiGreenMin = payload.value;
+      } else if (payload.threshold === 'kpiYellow') {
+        if (mod.isLowerBetter) mod.kpiYellowMax = payload.value; else mod.kpiYellowMin = payload.value;
+      }
+      clearTimeout(this.editTimers[payload.moduleId]);
+      this.editTimers[payload.moduleId] = setTimeout(() => this.renderChart(payload.moduleId, mod), 400);
+      this.refreshKpiColors(payload.moduleId, mod);
+    }
+    this.data.lastUpdate = new Date().toISOString();
+    this.updateLastUpdate();
+    this.saveLocal();
+  },
+
+  showEditIndicator(payload) {
+    if (payload.field === 'grid' && payload.key) {
+      const inp = document.querySelector('input[data-module="' + payload.moduleId + '"][data-day="' + payload.key + '"]');
+      if (inp) {
+        const c = inp.parentElement, o = c.style.boxShadow;
+        c.style.boxShadow = '0 0 0 3px rgba(245,158,11,.5)';
+        setTimeout(() => c.style.boxShadow = o, 800);
+      }
+    }
+  },
+
+  exportData() {
+    if (typeof XLSX === 'undefined') {
+      alert('Excel 导出库加载中，请稍后再试...');
+      return;
+    }
+    var self = this;
+    var wb = XLSX.utils.book_new();
+    var year = self.data.year || new Date().getFullYear();
+    var dateStr = new Date().toISOString().slice(0, 10);
+
+    // ===== Sheet 1: 汇总 =====
+    var sumRows = [['模块名称', '分类', '单位', '目标值', '绿色下限', '绿色上限', '黄色下限', '黄色上限', '越低越好', '当前月份', '当前数据条数', '已确认']];
+    Object.entries(self.data.modules).forEach(function(entry) {
+      var id = entry[0], mod = entry[1];
+      var mKey = String(mod.currentMonth);
+      var gd = (mod.gridData && mod.gridData[mKey]) ? mod.gridData[mKey] : {};
+      var vals = Object.values(gd).filter(function(v) { return v !== undefined && v !== null && v !== ''; });
+      var dataCount = vals.length;
+      if (mod.people && mod.people.length > 0) {
+        dataCount = mod.people.length + '人';
+      }
+      sumRows.push([
+        mod.title || id, mod.category || '', mod.unit || '',
+        mod.trendTarget !== undefined ? mod.trendTarget : '',
+        mod.kpiGreenMin !== null && mod.kpiGreenMin !== undefined ? mod.kpiGreenMin : '',
+        mod.kpiGreenMax !== null && mod.kpiGreenMax !== undefined ? mod.kpiGreenMax : '',
+        mod.kpiYellowMin !== null && mod.kpiYellowMin !== undefined ? mod.kpiYellowMin : '',
+        mod.kpiYellowMax !== null && mod.kpiYellowMax !== undefined ? mod.kpiYellowMax : '',
+        mod.isLowerBetter ? '是' : '否',
+        mod.currentMonth + '月', dataCount,
+        (mod.confirmed && mod.confirmed[mKey]) ? '是(' + mod.confirmed[mKey].by + ')' : '否'
+      ]);
+    });
+    var wsSum = XLSX.utils.aoa_to_sheet(sumRows);
+    wsSum['!cols'] = [{wch:22},{wch:8},{wch:6},{wch:8},{wch:9},{wch:9},{wch:9},{wch:9},{wch:9},{wch:8},{wch:12},{wch:16}];
+    XLSX.utils.book_append_sheet(wb, wsSum, '汇总');
+
+    // ===== Sheet per module: 人员表格 或 日历数据 + 趋势图数据 =====
+    Object.entries(self.data.modules).forEach(function(entry) {
+      var id = entry[0], mod = entry[1];
+      var mKey = String(mod.currentMonth);
+      var sName = (mod.title || id).replace(/[\\\/\*\?\[\]:]/g, '-').substring(0, 31);
+      var rows = [];
+
+      // 表头信息
+      rows.push(['指标名称', mod.title || id]);
+      rows.push(['分类', mod.category || '']);
+      rows.push(['单位', mod.unit || '']);
+      rows.push(['目标值', mod.trendTarget !== undefined ? mod.trendTarget : '']);
+      rows.push(['当前月份', mod.currentMonth + '月']);
+      rows.push([]);
+
+      // --- 人员表格模式 ---
+      if (mod.people && mod.people.length > 0 && mod.multiskill) {
+        // 多能工技能矩阵
+        rows.push(['=== 多能工技能矩阵 ===']);
+        rows.push(['姓名', '方波筛选', '分拣', '抽检', '包装']);
+        mod.people.forEach(function(p) {
+          rows.push([p.name || '(未命名)',
+            p.fangbo || '0', p.fenjian || '0', p.choujian || '0', p.baozhuang || '0']);
+        });
+        rows.push([]);
+        rows.push(['=== 各工序达标人数汇总 ===']);
+        rows.push(['工序', '达标人数（技能=1）', '总人数', '占比']);
+        var total = mod.people.length;
+        var skills = [
+          { label: '方波筛选', field: 'fangbo' },
+          { label: '分拣', field: 'fenjian' },
+          { label: '抽检', field: 'choujian' },
+          { label: '包装', field: 'baozhuang' }
+        ];
+        skills.forEach(function(sk) {
+          var count = 0;
+          mod.people.forEach(function(p) {
+            if (parseFloat(p[sk.field]) >= 1) count++;
+          });
+          rows.push([sk.label, count, total, total > 0 ? (count/total*100).toFixed(1) + '%' : '0%']);
+        });
+        rows.push([]);
+        rows.push(['目标技能比例', mod.trendTarget !== undefined ? (mod.trendTarget*100).toFixed(0) + '%' : '60%']);
+      } else if (mod.people && mod.people.length > 0) {
+        rows.push(['=== 人员提案明细 ===']);
+        rows.push(['姓名', '第一周', '第二周', '第三周', '第四周', '个人合计']);
+        var weekTotals = [0, 0, 0, 0];
+        mod.people.forEach(function(p) {
+          var w1 = Number(p.w1) || 0;
+          var w2 = Number(p.w2) || 0;
+          var w3 = Number(p.w3) || 0;
+          var w4 = Number(p.w4) || 0;
+          weekTotals[0] += w1; weekTotals[1] += w2;
+          weekTotals[2] += w3; weekTotals[3] += w4;
+          rows.push([p.name || '(未命名)', w1, w2, w3, w4, w1+w2+w3+w4]);
+        });
+        rows.push(['合计', weekTotals[0], weekTotals[1], weekTotals[2], weekTotals[3], weekTotals[0]+weekTotals[1]+weekTotals[2]+weekTotals[3]]);
+        rows.push([]);
+        rows.push(['=== 趋势图数据（每周汇总）===']);
+        rows.push(['周次', '提案总数', '目标值', '达成率']);
+        ['第1周','第2周','第3周','第4周'].forEach(function(w, i) {
+          var total = weekTotals[i];
+          var target = mod.trendTarget || 0;
+          var rate = target > 0 ? (total / target * 100).toFixed(1) + '%' : 'N/A';
+          rows.push([w, total, target, rate]);
+        });
+      } else {
+        // --- 普通模块：日历数据 ---
+        var gd = (mod.gridData && mod.gridData[mKey]) ? mod.gridData[mKey] : {};
+        rows.push(['日期', '数值']);
+        var daysInMonth = new Date(year, mod.currentMonth, 0).getDate();
+        var hasData = false;
+        for (var d = 1; d <= daysInMonth; d++) {
+          var dk = String(d);
+          var val = gd[dk];
+          if (val !== undefined && val !== null && val !== '') {
+            rows.push([year + '-' + (mod.currentMonth < 10 ? '0' : '') + mod.currentMonth + '-' + (d < 10 ? '0' : '') + d, Number(val)]);
+            hasData = true;
+          }
+        }
+        if (!hasData) { rows.push(['（暂无数据）', '']); }
+
+        // 趋势图数据区域（多月份横向对比）
+        rows.push([]);
+        rows.push(['=== 趋势图数据（按月份汇总）===']);
+        var months = [1,2,3,4,5,6,7,8,9,10,11,12];
+        var trendHeader = ['月份'];
+        months.forEach(function(m) { trendHeader.push(m + '月'); });
+        trendHeader.push('目标值', '单位');
+        rows.push(trendHeader);
+        var trendVals = [year + '年'];
+        months.forEach(function(m) {
+          var mk = String(m);
+          var mgd = (mod.gridData && mod.gridData[mk]) ? mod.gridData[mk] : {};
+          var vals2 = Object.values(mgd).filter(function(v) { return v !== undefined && v !== null && v !== '' && !isNaN(Number(v)); }).map(Number);
+          trendVals.push(vals2.length > 0 ? (vals2.reduce(function(a,b){return a+b;},0) / vals2.length).toFixed(2) : '');
+        });
+        trendVals.push(mod.trendTarget !== undefined ? mod.trendTarget : '', mod.unit || '');
+        rows.push(trendVals);
+      }
+
+      // 如果有确认历史，也加入
+      if (mod.confirmed && Object.keys(mod.confirmed).length > 0) {
+        rows.push([]);
+        rows.push(['=== 确认历史 ===']);
+        rows.push(['月份', '确认人', '确认时间', '数据汇总']);
+        Object.entries(mod.confirmed).forEach(function(ci) {
+          var mon = ci[0], info = ci[1];
+          var gridVals2 = info.data && info.data.grid ? Object.values(info.data.grid).filter(function(v) { return v !== undefined && v !== null && v !== '' && !isNaN(Number(v)); }).map(Number) : [];
+          var avg = gridVals2.length > 0 ? (gridVals2.reduce(function(a,b){return a+b;},0) / gridVals2.length).toFixed(2) : '无';
+          rows.push([mon + '月', info.by || '', info.at ? new Date(info.at).toLocaleString('zh-CN') : '', avg]);
+        });
+      }
+
+      var ws = XLSX.utils.aoa_to_sheet(rows);
+      ws['!cols'] = [{wch:28},{wch:20}];
+      XLSX.utils.book_append_sheet(wb, ws, sName);
+    });
+
+    XLSX.writeFile(wb, '成型工段指标看板_全量_' + dateStr + '.xlsx');
+    self.showToast('已导出 Excel（含数据+趋势）');
+  },
+
+  exportConfirmed() {
+    if (typeof XLSX === 'undefined') {
+      alert('Excel 导出库加载中，请稍后再试...');
+      return;
+    }
+    var self = this;
+    var wb = XLSX.utils.book_new();
+    var dateStr = new Date().toISOString().slice(0, 10);
+
+    // 收集所有已确认数据
+    var records = [];
+    Object.entries(self.data.modules).forEach(function(entry) {
+      var id = entry[0], mod = entry[1];
+      if (mod.confirmed) {
+        Object.entries(mod.confirmed).forEach(function(ci) {
+          var month = ci[0], info = ci[1];
+          var gridVals = info.data && info.data.grid ? Object.values(info.data.grid).filter(function(v) { return v !== undefined && v !== null && v !== '' && !isNaN(Number(v)); }).map(Number) : [];
+          var avg = gridVals.length > 0 ? (gridVals.reduce(function(a,b){return a+b;},0) / gridVals.length).toFixed(2) : '';
+          records.push({
+            moduleId: id, moduleName: mod.title || id, category: mod.category || '',
+            month: month + '月', confirmedBy: info.by || '', confirmedAt: info.at || '',
+            avg: avg, unit: mod.unit || '', target: mod.trendTarget !== undefined ? mod.trendTarget : '',
+            data: info.data
+          });
+        });
+      }
+    });
+
+    if (records.length === 0) {
+      alert('暂无已确认的数据。请先在各模块填写数据并点击"确认提交"。');
+      return;
+    }
+
+    // ===== Sheet 1: 确认汇总 =====
+    var sumRows = [['模块名称', '分类', '月份', '确认人', '确认时间', '月均值', '目标值', '单位', '达成状态']];
+    records.forEach(function(r) {
+      var status = '';
+      if (r.target !== '' && r.avg !== '') {
+        var mod = self.data.modules[r.moduleId];
+        if (mod) {
+          if (mod.isLowerBetter) {
+            status = Number(r.avg) <= Number(r.target) ? '达标' : '未达标';
+          } else {
+            status = Number(r.avg) >= Number(r.target) ? '达标' : '未达标';
+          }
+        }
+      }
+      sumRows.push([r.moduleName, r.category, r.month, r.confirmedBy, r.confirmedAt ? new Date(r.confirmedAt).toLocaleString('zh-CN') : '', r.avg, r.target, r.unit, status]);
+    });
+    var wsSum2 = XLSX.utils.aoa_to_sheet(sumRows);
+    wsSum2['!cols'] = [{wch:22},{wch:8},{wch:8},{wch:12},{wch:22},{wch:10},{wch:8},{wch:6},{wch:8}];
+    XLSX.utils.book_append_sheet(wb, wsSum2, '确认汇总');
+
+    // ===== Sheet per confirmed module =====
+    records.forEach(function(r) {
+      var sName = (r.moduleName + '_' + r.month).replace(/[\\\/\*\?\[\]:]/g, '-').substring(0, 31);
+      var rows = [];
+      rows.push(['模块名称', r.moduleName]);
+      rows.push(['分类', r.category]);
+      rows.push(['月份', r.month]);
+      rows.push(['确认人', r.confirmedBy]);
+      rows.push(['确认时间', r.confirmedAt ? new Date(r.confirmedAt).toLocaleString('zh-CN') : '']);
+      rows.push(['目标值', r.target + ' ' + r.unit]);
+      rows.push([]);
+      rows.push(['日期序号', '数值']);
+      if (r.data && r.data.grid) {
+        Object.entries(r.data.grid).forEach(function(de) {
+          if (de[1] !== undefined && de[1] !== null && de[1] !== '') {
+            rows.push([de[0], Number(de[1])]);
+          }
+        });
+      }
+      if (r.data && r.data.problem) {
+        rows.push([]);
+        rows.push(['问题说明', r.data.problem]);
+      }
+      var ws = XLSX.utils.aoa_to_sheet(rows);
+      ws['!cols'] = [{wch:20},{wch:20}];
+      XLSX.utils.book_append_sheet(wb, ws, sName);
+    });
+
+    XLSX.writeFile(wb, '成型工段指标看板_已确认_' + dateStr + '.xlsx');
+    self.showToast('已导出 ' + records.length + ' 条已确认数据');
+  },
+
+  downloadConfirmed(data) {
+    // 不再使用（已整合到 exportConfirmed），保留兼容
+    this.exportConfirmed();
+  },
+
+  resetData() {
+    this.data = initGrids(JSON.parse(JSON.stringify(INITIAL_DATA)));
+    localStorage.removeItem(LS_KEY);
+    this.renderHeader();
+    this.renderModules();
+    this.pushToCloud();
+  }
+};
+
+</script>
+</body>
+</html>
