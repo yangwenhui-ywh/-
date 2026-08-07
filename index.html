@@ -754,6 +754,14 @@ App = {
         return;
       }
       
+      // 合并新增模块：本地 INITIAL_DATA 中有但云端没有的模块，自动补入云端数据
+      var _localModKeys = Object.keys(INITIAL_DATA.modules);
+      for (var _li = 0; _li < _localModKeys.length; _li++) {
+        var _lk = _localModKeys[_li];
+        if (!cloudData.modules[_lk]) {
+          cloudData.modules[_lk] = JSON.parse(JSON.stringify(INITIAL_DATA.modules[_lk]));
+        }
+      }
       self.data.modules = initGrids(cloudData.modules);
       self.data['work段'] = cloudData['work段'] || '';
       self.data['班组'] = cloudData['班组'] || '';
