@@ -380,7 +380,8 @@ var CATEGORY_COLORS = {
 
 var ICONS = {
   shield:'🛡', broom:'🧹', 'check-circle':'✅', 'search-check':'🔍',
-  truck:'🚚', clock:'⏱', coins:'💰', zap:'⚡', lightbulb:'💡', users:'👥'
+  truck:'🚚', clock:'⏱', coins:'💰', zap:'⚡', lightbulb:'💡', users:'👥',
+  box:'📦'
 };
 
 var WEEK_HEADERS = ['日','一','二','三','四','五','六'];
@@ -474,6 +475,7 @@ var INITIAL_DATA = {
     quality_passrate:   makeModule('质量---合格率',           '质量','check-circle',0.9, '%',    '质量合格率趋势图(每天)',  false, false, {kpiGreenMin:0.9, kpiYellowMin:0.8}),
     quality_inspection: makeModule('质量---自互检',           '质量','search-check',0,   '%',    '自互检趋势图(每天)',     false, false, {kpiGreenMin:0,   kpiYellowMin:0}),
     delivery_completion:makeModule('交付---累计计划完成率',   '交付','truck',       1,    '%',    '累计作业完成率趋势图',    false, false, {kpiGreenMin:1,   kpiYellowMin:0.85}),
+    delivery_batches:   makeModule('交付---当天入库批数',     '交付','box',         13,  '批',   '当天入库批数趋势图(每天)',  false, false, {kpiGreenMin:13, kpiYellowMin:11}),
     delivery_cycle:     makeModule('交付---平均生产周期',     '交付','clock',       48,  'h',    '平均生产周期趋势图(每天)', false, true,  {kpiGreenMax:48,  kpiYellowMax:58}),
     cost_output:        makeModule('成本---人均产出',         '成本','coins',       0.5, '件',   '人均产出趋势图(每天)',    false, false, {kpiGreenMin:0.5, kpiYellowMin:0.4}),
     cost_energy:        makeModule('成本---单位批次能耗',     '成本','zap',         80,  'kWh',  '单位批次能耗趋势图(每天)', false, true,  {kpiGreenMax:80,  kpiYellowMax:96}),
