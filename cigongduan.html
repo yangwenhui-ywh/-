@@ -388,7 +388,7 @@ var APP_VERSION = 'v1.0-cgd-gitee';
 var LS_KEY = 'cigongduan_dashboard_v1';
 var BC_CHANNEL = 'cigongduan_bc_v1';
 // === Gitee API 配置（国内可访问，替代 GitHub API） ===
-var GITEE_TOKEN = String.fromCharCode(100,99,100,98,100,97,54,55,55,54,53,53,98,49,101,51,100,97,53,101,101,100,53,51,97,101,48,97,51,54,100,99);
+var GITEE_TOKEN = String.fromCharCode(50,50,51,49,56,56,50,48,50,54,49,57,99,98,99,55,52,100,57,97,98,97,99,102,101,54,56,55,98,53,100,48);
 var GITEE_REPO = 'yang-wenhui222/kanban-data';var GITEE_FILE='cigongduan.json';
 var GITEE_API_CONTENT = 'https://gitee.com/api/v5/repos/' + GITEE_REPO + '/contents/' + GITEE_FILE;
 var CLOUD_POLL_INTERVAL = 3000;
@@ -752,6 +752,14 @@ App = {
         return;
       }
       
+      // 合并新增模块：本地 INITIAL_DATA 中有但云端没有的模块，自动补入云端数据
+      var _localModKeys = Object.keys(INITIAL_DATA.modules);
+      for (var _li = 0; _li < _localModKeys.length; _li++) {
+        var _lk = _localModKeys[_li];
+        if (!cloudData.modules[_lk]) {
+          cloudData.modules[_lk] = JSON.parse(JSON.stringify(INITIAL_DATA.modules[_lk]));
+        }
+      }
       self.data.modules = initGrids(cloudData.modules);
       self.data['work段'] = cloudData['work段'] || '';
       self.data['班组'] = cloudData['班组'] || '';
