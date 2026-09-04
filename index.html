@@ -381,7 +381,7 @@ var CATEGORY_COLORS = {
 var ICONS = {
   shield:'🛡', broom:'🧹', 'check-circle':'✅', 'search-check':'🔍',
   truck:'🚚', clock:'⏱', coins:'💰', zap:'⚡', lightbulb:'💡', users:'👥',
-  box:'📦'
+  box:'📦', flask:'🧪'
 };
 
 var WEEK_HEADERS = ['日','一','二','三','四','五','六'];
@@ -476,6 +476,7 @@ var INITIAL_DATA = {
     quality_inspection: makeModule('质量---自互检',           '质量','search-check',0,   '%',    '自互检趋势图(每天)',     false, false, {kpiGreenMin:0,   kpiYellowMin:0}),
     delivery_completion:makeModule('交付---累计计划完成率',   '交付','truck',       1,    '%',    '累计作业完成率趋势图',    false, false, {kpiGreenMin:1,   kpiYellowMin:0.85}),
     delivery_batches:   makeModule('交付---当天入库批数',     '交付','box',         13,  '批',   '当天入库批数趋势图(每天)',  false, false, {kpiGreenMin:13, kpiYellowMin:11}),
+    delivery_paramtest: makeModule('交付---参数测试完成批数', '交付','flask',       13,  '批',   '参数测试完成批数趋势图(每天)', false, false, {kpiGreenMin:13, kpiYellowMin:11}),
     delivery_cycle:     makeModule('交付---平均生产周期',     '交付','clock',       48,  'h',    '平均生产周期趋势图(每天)', false, true,  {kpiGreenMax:48,  kpiYellowMax:58}),
     cost_output:        makeModule('成本---人均产出',         '成本','coins',       0.5, '件',   '人均产出趋势图(每天)',    false, false, {kpiGreenMin:0.5, kpiYellowMin:0.4}),
     cost_energy:        makeModule('成本---单位批次能耗',     '成本','zap',         80,  'kWh',  '单位批次能耗趋势图(每天)', false, true,  {kpiGreenMax:80,  kpiYellowMax:96}),
@@ -1666,16 +1667,22 @@ App = {
       var barColors = skRatios.map(function(r) {
         return r >= 60 ? '#22c55e' : (r >= 30 ? '#f59e0b' : '#ef4444');
       });
-      this.charts[id] = new Chart(cv.getContext('2d'), {
-        type: 'bar',
-        data: { labels: skLabels, datasets: [
+      var skAvg = skValues.length > 0 ? skValues.reduce(function(a, b) { return a + b; }, 0) / skValues.length : null;
+      var skDatasets = [
           { label: '目标比例(' + targetRatio.toFixed(0) + '%)', data: targetLine, borderColor: '#f59e0b', borderDash: [6,4], borderWidth: 2, backgroundColor: 'transparent', type: 'line', fill: false, pointRadius: 4, pointBackgroundColor: '#f59e0b' },
           { label: '达标人数', data: skValues, backgroundColor: barColors, borderColor: barColors.map(function(c){return c;}), borderWidth: 1, borderRadius: 4 }
-        ]},
+        ];
+      if (skAvg !== null) {
+        skDatasets.push({ label: '已填均值(' + (Math.round(skAvg * 100) / 100) + '人)', data: new Array(skLabels.length).fill(skAvg), borderColor: '#a855f7', borderDash: [2, 2], borderWidth: 1.5, type: 'line', fill: false, pointRadius: 0 });
+      }
+      this.charts[id] = new Chart(cv.getContext('2d'), {
+        type: 'bar',
+        data: { labels: skLabels, datasets: skDatasets },
         options: {
           responsive: true, maintainAspectRatio: false,
           plugins: { legend: { display: true, position: 'top', labels: { boxWidth: 12, font: { size: 10 }, usePointStyle: true } },
             tooltip: { callbacks: { label: function(it) {
+              if (it.dataset.label.indexOf('已填均值') === 0) return it.dataset.label;
               if (it.dataset.label.indexOf('%') > -1) return it.dataset.label + ': ' + it.raw + '%';
               return it.dataset.label + ': ' + it.raw + ' 人 / ' + total + ' 人 (' + skRatios[it.dataIndex].toFixed(1) + '%)';
             } } }
@@ -1705,12 +1712,17 @@ App = {
         if (v >= (mod.kpiYellowMin || mod.trendTarget * 0.75)) return '#f59e0b';
         return '#ef4444';
       });
-      this.charts[id] = new Chart(cv.getContext('2d'), {
-        type: 'bar',
-        data: { labels: wLabels, datasets: [
+      var wAvg = wValues.length > 0 ? wValues.reduce(function(a, b) { return a + b; }, 0) / wValues.length : null;
+      var wDatasets = [
           { label: '目标(' + (mod.trendUnit || '件') + ')', data: wTarget, borderColor: '#f59e0b', borderDash: [6,4], borderWidth: 2, backgroundColor: 'transparent', type: 'line', fill: false, pointRadius: 0 },
           { label: '实际提案数', data: wValues, backgroundColor: barColors, borderColor: barColors.map(function(c){return c;}), borderWidth: 1, borderRadius: 4 }
-        ]},
+        ];
+      if (wAvg !== null) {
+        wDatasets.push({ label: '已填均值(' + (Math.round(wAvg * 100) / 100) + ')', data: new Array(4).fill(wAvg), borderColor: '#a855f7', borderDash: [2, 2], borderWidth: 1.5, type: 'line', fill: false, pointRadius: 0 });
+      }
+      this.charts[id] = new Chart(cv.getContext('2d'), {
+        type: 'bar',
+        data: { labels: wLabels, datasets: wDatasets },
         options: {
           responsive: true, maintainAspectRatio: false,
           plugins: { legend: { display: true, position: 'top', labels: { boxWidth: 12, font: { size: 10 }, usePointStyle: true } },
@@ -1733,12 +1745,18 @@ App = {
       labels.push(d); values.push(v ? parseFloat(v) : null);
     }
     const target = new Array(max).fill(mod.trendTarget);
+    const filledVals = values.filter(v => v != null && !isNaN(v));
+    const avgVal = filledVals.length > 0 ? filledVals.reduce((a, b) => a + b, 0) / filledVals.length : null;
+    const lineDatasets = [
+      { label: '目标', data: target, borderColor: '#f59e0b', borderDash: [6, 4], borderWidth: 2, fill: false, pointRadius: 0 },
+      { label: '实际', data: values, borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.12)', borderWidth: 2.5, fill: true, tension: 0.3, pointRadius: 2.5, pointHoverRadius: 5, pointBackgroundColor: '#2563eb' }
+    ];
+    if (avgVal !== null) {
+      lineDatasets.push({ label: '已填均值(' + (Math.round(avgVal * 100) / 100) + ')', data: new Array(max).fill(avgVal), borderColor: '#a855f7', borderDash: [2, 2], borderWidth: 1.5, fill: false, pointRadius: 0 });
+    }
     this.charts[id] = new Chart(cv.getContext('2d'), {
       type: 'line',
-      data: { labels, datasets: [
-        { label: '目标', data: target, borderColor: '#f59e0b', borderDash: [6, 4], borderWidth: 2, fill: false, pointRadius: 0 },
-        { label: '实际', data: values, borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.12)', borderWidth: 2.5, fill: true, tension: 0.3, pointRadius: 2.5, pointHoverRadius: 5, pointBackgroundColor: '#2563eb' }
-      ]},
+      data: { labels, datasets: lineDatasets },
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: { legend: { display: true, position: 'top', labels: { boxWidth: 12, font: { size: 10 }, usePointStyle: true } },
