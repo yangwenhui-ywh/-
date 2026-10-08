@@ -430,7 +430,7 @@ var MONTH_OPTIONS = [
 
 function makeModule(title, category, icon, trendTarget, unit, trendTitle, isMonthly, isLowerBetter, opts) {
   opts = opts || {};
-  return {
+  var mod = {
     title, category, icon, trendTarget, unit, trendTitle,
     currentMonth: new Date().getMonth() + 1,
     gridData: {},
@@ -443,6 +443,11 @@ function makeModule(title, category, icon, trendTarget, unit, trendTitle, isMont
     kpiYellowMax: opts.kpiYellowMax !== undefined ? opts.kpiYellowMax : null,
     confirmed: {} // { "7": { by: "张三", at: "iso", data: {...} } }
   };
+  // 合并扩展字段（multiskill / skills / reward / rewardDays 等）
+  Object.keys(opts).forEach(function(k) {
+    if (!(k in mod)) mod[k] = opts[k];
+  });
+  return mod;
 }
 
 // 生成当月日期标签：1日 ~ 月末
@@ -481,6 +486,16 @@ function initGrids(data) {
       } else {
         mod.kpiGreenMin = mod.trendTarget;
         mod.kpiYellowMin = Math.round(mod.trendTarget * 0.85 * 100) / 100;
+      }
+    }
+    // 结构性标记兜底：云端数据若缺 multiskill / reward / skills / rewardDays，从本地同 id 模块补入
+    if (typeof INITIAL_DATA !== 'undefined' && INITIAL_DATA.modules && INITIAL_DATA.modules[id] && INITIAL_DATA.modules[id] !== mod) {
+      var localMod = INITIAL_DATA.modules[id];
+      if (mod.multiskill === undefined && localMod.multiskill !== undefined) mod.multiskill = localMod.multiskill;
+      if (mod.reward === undefined && localMod.reward !== undefined) mod.reward = localMod.reward;
+      if (!mod.skills && localMod.skills) mod.skills = JSON.parse(JSON.stringify(localMod.skills));
+      if (mod.reward && (!mod.rewardDays || !mod.rewardDays.length)) {
+        mod.rewardDays = (localMod.rewardDays && localMod.rewardDays.length) ? localMod.rewardDays.slice() : buildMonthDays();
       }
     }
     // 归一化 skills 数组（多能工模块）
@@ -565,7 +580,9 @@ INITIAL_DATA.modules.improve_reward.people = [
   {name:'赵玉建'},{name:'关键江'},{name:'何卓栩'},{name:'赵冰'},{name:'任强'},
   {name:'杨杭'},{name:'杨尘'},{name:'张津源'},{name:'王金东'}
 ].map(function(p) {
-  return buildRewardPerson(p.name, INITIAL_DATA.modules.improve_reward.rewardDays.length);
+  var rMod = INITIAL_DATA.modules.improve_reward;
+  var dayN = (rMod.rewardDays && rMod.rewardDays.length) ? rMod.rewardDays.length : buildMonthDays().length;
+  return buildRewardPerson(p.name, dayN);
 });
 
 function getGrid(mod) {
